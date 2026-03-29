@@ -1,21 +1,32 @@
 import { useState } from 'react';
-import { Phone, MapPin, User, X } from 'lucide-react';
+import { Phone, MapPin, User, X, Clock, Truck } from 'lucide-react';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase';
 import content from '../data/content.json';
 
-const { checkout, whatsapp } = content;
+const { checkout, whatsapp, delivery } = content;
+
+function getMaxPrepTime(cart) {
+  const best = cart.reduce((max, item) => (item.prepMinutes ?? 0) > (max.prepMinutes ?? 0) ? item : max, cart[0]);
+  return best?.prepTime || null;
+}
 
 export default function CheckoutModal({ cart, total, onClose, onSuccess }) {
-  const [form, setForm] = useState({ name: '', address: '', phone: '' });
+  const [form, setForm] = useState({ name: '', address: '', phone: '', zoneId: '' });
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
+
+  const maxPrepTime = getMaxPrepTime(cart);
+  const selectedZone = form.zoneId !== '' ? delivery.zones[Number(form.zoneId)] : null;
+  const deliveryPrice = selectedZone ? selectedZone.price : 0;
+  const grandTotal = total + deliveryPrice;
 
   const validate = () => {
     const e = {};
     if (!form.name.trim()) e.name = checkout.validation.nameRequired;
     if (!form.address.trim()) e.address = checkout.validation.addressRequired;
     if (!form.phone.trim() || !/^01[0-9]{9}$/.test(form.phone.trim())) e.phone = checkout.validation.phoneInvalid;
+    if (!form.zoneId) e.zone = delivery.zoneRequired;
     return e;
   };
 
@@ -35,16 +46,18 @@ export default function CheckoutModal({ cart, total, onClose, onSuccess }) {
         name: form.name.trim(),
         address: form.address.trim(),
         phone: form.phone.trim(),
+        zone: selectedZone.name,
         items,
-        total,
+        total: grandTotal,
+        deliveryPrice,
         status: 'pending',
         timestamp: serverTimestamp(),
       });
 
       const number = import.meta.env.VITE_WHATSAPP_NUMBER || '201000000000';
-      const itemsList = cart.map(i => `- ${i.name} x${i.quantity} = ${i.price * i.quantity} ${whatsapp.currency}`).join('\n');
+      const itemsList = cart.map(i => `${i.name} = ${i.price} × ${i.quantity} = ${i.price * i.quantity} ${whatsapp.currency}`).join('\n');
       const msg = encodeURIComponent(
-        `${whatsapp.header}\n\n${whatsapp.nameLabel} ${form.name}\n${whatsapp.addressLabel} ${form.address}\n${whatsapp.phoneLabel} ${form.phone}\n\n${whatsapp.itemsLabel}\n${itemsList}\n\n${whatsapp.totalLabel} ${total} ${whatsapp.currency}`
+        `${whatsapp.header}\n\n${whatsapp.nameLabel} ${form.name}\n${whatsapp.addressLabel} ${form.address}\n${whatsapp.phoneLabel} ${form.phone}\n${delivery.zoneWhatsappLabel} ${selectedZone.name}\n\n${whatsapp.itemsLabel}\n${itemsList}\n\n${delivery.whatsappLabel} ${deliveryPrice} ${delivery.currency}\n${whatsapp.totalLabel} ${grandTotal} ${whatsapp.currency}\n${whatsapp.prepTimeLabel} ${maxPrepTime}`
       );
       window.open(`https://wa.me/${number}?text=${msg}`, '_blank');
       onSuccess();
@@ -66,6 +79,7 @@ export default function CheckoutModal({ cart, total, onClose, onSuccess }) {
           </button>
         </div>
 
+        {/* Order Summary */}
         <div className="bg-amber-50 rounded-2xl p-4 mb-6">
           <h3 className="font-bold text-gray-700 mb-2">{checkout.orderSummaryTitle}</h3>
           {cart.map(item => (
@@ -74,13 +88,44 @@ export default function CheckoutModal({ cart, total, onClose, onSuccess }) {
               <span className="font-bold">{item.price * item.quantity} {checkout.currency}</span>
             </div>
           ))}
+          <div className="flex justify-between text-sm text-gray-600 py-1">
+            <span>{delivery.label}{selectedZone ? ` (${selectedZone.name})` : ''}</span>
+            <span className="font-bold">{selectedZone ? `${deliveryPrice} ${delivery.currency}` : '—'}</span>
+          </div>
           <div className="border-t border-amber-200 mt-2 pt-2 flex justify-between font-black text-red-600">
             <span>{checkout.totalLabel}</span>
-            <span>{total} {checkout.currency}</span>
+            <span>{grandTotal} {checkout.currency}</span>
           </div>
+          {maxPrepTime && (
+            <div className="flex items-center gap-2 mt-3 bg-amber-100 rounded-xl px-3 py-2">
+              <Clock size={14} className="text-amber-700 shrink-0" />
+              <span className="text-amber-800 text-sm font-semibold">{checkout.prepTimeLabel}: {maxPrepTime}</span>
+            </div>
+          )}
         </div>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          {/* Zone */}
+          <div>
+            <label className="block text-sm font-bold text-gray-700 mb-1">
+              <Truck size={14} className="inline ml-1" />{delivery.zoneLabel}
+            </label>
+            <select
+              value={form.zoneId}
+              onChange={e => setForm({ ...form, zoneId: e.target.value })}
+              className={`w-full border ${errors.zone ? 'border-red-400' : 'border-gray-200'} rounded-xl px-4 py-3 text-right bg-white focus:outline-none focus:ring-2 focus:ring-red-400`}
+            >
+              <option value="">{delivery.zonePlaceholder}</option>
+              {delivery.zones.map((zone, index) => (
+                <option key={index} value={index}>
+                  {zone.name}
+                </option>
+              ))}
+            </select>
+            {errors.zone && <p className="text-red-500 text-xs mt-1">{errors.zone}</p>}
+          </div>
+
+          {/* Name */}
           <div>
             <label className="block text-sm font-bold text-gray-700 mb-1">
               <User size={14} className="inline ml-1" />{checkout.nameLabel}
@@ -88,20 +133,21 @@ export default function CheckoutModal({ cart, total, onClose, onSuccess }) {
             <input
               type="text"
               value={form.name}
-              onChange={e => setForm({...form, name: e.target.value})}
+              onChange={e => setForm({ ...form, name: e.target.value })}
               placeholder={checkout.namePlaceholder}
               className={`w-full border ${errors.name ? 'border-red-400' : 'border-gray-200'} rounded-xl px-4 py-3 text-right focus:outline-none focus:ring-2 focus:ring-red-400`}
             />
             {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name}</p>}
           </div>
 
+          {/* Address */}
           <div>
             <label className="block text-sm font-bold text-gray-700 mb-1">
               <MapPin size={14} className="inline ml-1" />{checkout.addressLabel}
             </label>
             <textarea
               value={form.address}
-              onChange={e => setForm({...form, address: e.target.value})}
+              onChange={e => setForm({ ...form, address: e.target.value })}
               placeholder={checkout.addressPlaceholder}
               rows={3}
               className={`w-full border ${errors.address ? 'border-red-400' : 'border-gray-200'} rounded-xl px-4 py-3 text-right focus:outline-none focus:ring-2 focus:ring-red-400 resize-none`}
@@ -109,6 +155,7 @@ export default function CheckoutModal({ cart, total, onClose, onSuccess }) {
             {errors.address && <p className="text-red-500 text-xs mt-1">{errors.address}</p>}
           </div>
 
+          {/* Phone */}
           <div>
             <label className="block text-sm font-bold text-gray-700 mb-1">
               <Phone size={14} className="inline ml-1" />{checkout.phoneLabel}
@@ -116,7 +163,7 @@ export default function CheckoutModal({ cart, total, onClose, onSuccess }) {
             <input
               type="tel"
               value={form.phone}
-              onChange={e => setForm({...form, phone: e.target.value})}
+              onChange={e => setForm({ ...form, phone: e.target.value })}
               placeholder={checkout.phonePlaceholder}
               className={`w-full border ${errors.phone ? 'border-red-400' : 'border-gray-200'} rounded-xl px-4 py-3 text-right focus:outline-none focus:ring-2 focus:ring-red-400`}
             />

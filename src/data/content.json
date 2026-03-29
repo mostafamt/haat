@@ -22,6 +22,28 @@
     "currency": "جنيه"
   },
 
+  "delivery": {
+    "label": "رسوم التوصيل",
+    "currency": "جنيه",
+    "whatsappLabel": "🛵 رسوم التوصيل:",
+    "zoneLabel": "منطقة التوصيل",
+    "zonePlaceholder": "اختر منطقتك",
+    "zoneWhatsappLabel": "📍 منطقة التوصيل:",
+    "zoneRequired": "منطقة التوصيل مطلوبة",
+    "zones": [
+      { "id": 1, "name": "عزبة طه",  "price": 15 },
+      { "id": 2, "name": "مساكن نمرة 2", "price": 20 },
+      { "id": 3, "name": "مساكن نمرة 1", "price": 20 },
+      { "id": 4, "name": "مساكن نمرة 3", "price": 20 },
+      { "id": 5, "name": "منشا", "price": 20 },
+      { "id": 6, "name": "التمليك", "price": 20 },
+      { "id": 7, "name": "الحرير", "price": 30 },
+      { "id": 8, "name": "الخضراء", "price": 30 },
+      { "id": 9, "name": "الكراكول", "price": 30 },
+      { "id": 10, "name": "الوابور", "price": 30 }
+    ]
+  },
+
   "checkout": {
     "title": "إتمام الطلب",
     "orderSummaryTitle": "ملخص الطلب",
@@ -36,6 +58,7 @@
     "submitButton": "تأكيد الطلب عبر واتساب 💬",
     "loadingButton": "جاري الإرسال...",
     "errorAlert": "حدث خطأ، حاول مرة أخرى",
+    "prepTimeLabel": "وقت التحضير المتوقع",
     "validation": {
       "nameRequired": "الاسم مطلوب",
       "addressRequired": "العنوان مطلوب",
@@ -50,6 +73,7 @@
     "phoneLabel": "📞 الهاتف:",
     "itemsLabel": "📋 الطلب:",
     "totalLabel": "💰 الإجمالي:",
+    "prepTimeLabel": "⏳ وقت التحضير المتوقع:",
     "currency": "جنيه"
   },
 
@@ -81,28 +105,34 @@
       "name": "فرخة كاملة",
       "price": 240,
       "image": "/full-chicken.png",
-      "includes": ["أرز", "سلطة", "طحينة", "خبز"]
+      "includes": ["أرز", "سلطة", "طحينة", "خبز"],
+      "prepTime": "60-40 دقيقة",
+      "prepMinutes": 60
     },
     {
       "id": 2,
       "name": "نص فرخة",
       "price": 130,
       "image": "/half-chicken.png",
-      "includes": ["أرز", "سلطة", "طحينة", "خبز"]
+      "includes": ["أرز", "سلطة", "طحينة", "خبز"],
+      "prepTime": "50-30 دقيقة",
+      "prepMinutes": 50
     },
     {
       "id": 3,
       "name": "ربع فرخة",
       "price": 70,
       "image": "/quarter-chicken.png",
-      "includes": ["أرز", "سلطة", "طحينة", "خبز"]
+      "includes": ["أرز", "سلطة", "طحينة", "خبز"],
+      "prepTime": "40-20 دقيقة",
+      "prepMinutes": 40
     }
   ],
 
   "extras": [
-    { "id": 101, "name": "بيبسي", "price": 20, "emoji": "🥤" },
-    { "id": 102, "name": "شيبسي", "price": 15, "emoji": "🍟" },
-    { "id": 103, "name": "أرز إضافي", "price": 20, "emoji": "🍚" },
+    { "id": 101, "name": "بيبسي",       "price": 20, "emoji": "🥤" },
+    { "id": 102, "name": "شيبسي",       "price": 15, "emoji": "🍟" },
+    { "id": 103, "name": "أرز إضافي",   "price": 20, "emoji": "🍚" },
     { "id": 104, "name": "سلطة إضافية", "price": 15, "emoji": "🥗" }
   ]
 }

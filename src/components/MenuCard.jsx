@@ -1,4 +1,4 @@
-import { Plus, Minus } from 'lucide-react';
+import { Plus, Minus, Clock } from 'lucide-react';
 import content from '../data/content.json';
 
 const { menu } = content;
@@ -16,11 +16,19 @@ export default function MenuCard({ item, quantity, onAdd, onRemove, onOpen }) {
           <p className="text-red-600 font-bold text-xl">{item.price} {menu.currency}</p>
         </div>
       </div>
-      {item.includes && (
-        <p className="text-xs text-gray-500">
-          {menu.includesLabel} {item.includes.join(' · ')}
-        </p>
-      )}
+      <div className="flex items-center justify-between">
+        {item.includes && (
+          <p className="text-xs text-gray-500">
+            {menu.includesLabel} {item.includes.join(' · ')}
+          </p>
+        )}
+        {item.prepTime && (
+          <span className="flex items-center gap-1 bg-amber-50 text-amber-700 text-xs font-semibold px-2 py-1 rounded-full shrink-0">
+            <Clock size={11} />
+            {item.prepTime}
+          </span>
+        )}
+      </div>
       <div className="flex items-center justify-between mt-1">
         <div className="flex items-center gap-3 bg-gray-100 rounded-full px-3 py-1" onClick={e => e.stopPropagation()}>
           <button
