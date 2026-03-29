@@ -1,4 +1,7 @@
 import { ShoppingCart } from 'lucide-react';
+import content from '../data/content.json';
+
+const { cart: c } = content;
 
 export default function CartBar({ itemCount, total, onCheckout }) {
   if (itemCount === 0) return null;
@@ -11,10 +14,10 @@ export default function CartBar({ itemCount, total, onCheckout }) {
       >
         <div className="flex items-center gap-2">
           <ShoppingCart size={22} />
-          <span className="font-black text-lg">{itemCount} عنصر</span>
+          <span className="font-black text-lg">{itemCount} {c.itemUnit}</span>
         </div>
         <div className="bg-white text-red-600 font-black px-4 py-1 rounded-full">
-          {total} جنيه
+          {total} {c.currency}
         </div>
       </button>
     </div>

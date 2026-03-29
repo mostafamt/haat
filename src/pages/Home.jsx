@@ -3,15 +3,19 @@ import Hero from '../components/Hero';
 import MenuCard from '../components/MenuCard';
 import CartBar from '../components/CartBar';
 import CheckoutModal from '../components/CheckoutModal';
+import Footer from '../components/Footer';
+import ItemModal from '../components/ItemModal';
 import { menuItems, extras } from '../data/menuItems';
+import content from '../data/content.json';
+
+const { menu, home } = content;
 
 export default function Home() {
   const [cart, setCart] = useState({});
   const [showCheckout, setShowCheckout] = useState(false);
   const [orderDone, setOrderDone] = useState(false);
+  const [selectedItem, setSelectedItem] = useState(null);
   const menuRef = useRef(null);
-
-  const allItems = [...menuItems, ...extras];
 
   const getQty = (id) => cart[id]?.quantity || 0;
   const addItem = (item) => {
@@ -49,12 +53,12 @@ export default function Home() {
 
       {orderDone && (
         <div className="bg-green-500 text-white text-center py-3 font-bold text-lg">
-          ✅ تم استلام طلبك! سيتواصل معك فريقنا قريباً
+          {home.orderSuccess}
         </div>
       )}
 
       <div ref={menuRef} className="max-w-lg mx-auto px-4 py-8">
-        <h2 className="text-2xl font-black text-gray-800 mb-4 text-center">قائمتنا 🍗</h2>
+        <h2 className="text-2xl font-black text-gray-800 mb-4 text-center">{menu.sectionTitle}</h2>
         <div className="grid gap-4">
           {menuItems.map(item => (
             <MenuCard
@@ -63,11 +67,12 @@ export default function Home() {
               quantity={getQty(item.id)}
               onAdd={() => addItem(item)}
               onRemove={() => removeItem(item)}
+              onOpen={() => setSelectedItem(item)}
             />
           ))}
         </div>
 
-        <h2 className="text-2xl font-black text-gray-800 mt-8 mb-4 text-center">إضافات ✨</h2>
+        <h2 className="text-2xl font-black text-gray-800 mt-8 mb-4 text-center">{menu.extrasSectionTitle}</h2>
         <div className="grid grid-cols-2 gap-3">
           {extras.map(item => (
             <MenuCard
@@ -76,6 +81,7 @@ export default function Home() {
               quantity={getQty(item.id)}
               onAdd={() => addItem(item)}
               onRemove={() => removeItem(item)}
+              onOpen={() => setSelectedItem(item)}
             />
           ))}
         </div>
@@ -83,7 +89,19 @@ export default function Home() {
 
       <div className="pb-24" />
 
+      <Footer />
+
       <CartBar itemCount={itemCount} total={total} onCheckout={() => setShowCheckout(true)} />
+
+      {selectedItem && (
+        <ItemModal
+          item={selectedItem}
+          quantity={getQty(selectedItem.id)}
+          onAdd={() => addItem(selectedItem)}
+          onRemove={() => removeItem(selectedItem)}
+          onClose={() => setSelectedItem(null)}
+        />
+      )}
 
       {showCheckout && (
         <CheckoutModal

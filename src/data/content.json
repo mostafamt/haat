@@ -1,0 +1,108 @@
+{
+  "brand": {
+    "name": "هات",
+    "tagline": "أصل المشوي واللقمة الهنية",
+    "description": "دجاج مشوي طازج — توصيل سريع لبابك",
+    "logo": "/logo.png"
+  },
+
+  "hero": {
+    "ctaButton": "اطلب الآن 🛒"
+  },
+
+  "menu": {
+    "sectionTitle": "قائمتنا 🍗",
+    "extrasSectionTitle": "إضافات ✨",
+    "includesLabel": "يشمل:",
+    "currency": "جنيه"
+  },
+
+  "cart": {
+    "itemUnit": "عنصر",
+    "currency": "جنيه"
+  },
+
+  "checkout": {
+    "title": "إتمام الطلب",
+    "orderSummaryTitle": "ملخص الطلب",
+    "totalLabel": "الإجمالي",
+    "currency": "جنيه",
+    "nameLabel": "الاسم",
+    "namePlaceholder": "اسمك الكامل",
+    "addressLabel": "العنوان التفصيلي",
+    "addressPlaceholder": "الشارع، المنطقة، أقرب نقطة مميزة...",
+    "phoneLabel": "رقم الهاتف",
+    "phonePlaceholder": "01xxxxxxxxx",
+    "submitButton": "تأكيد الطلب عبر واتساب 💬",
+    "loadingButton": "جاري الإرسال...",
+    "errorAlert": "حدث خطأ، حاول مرة أخرى",
+    "validation": {
+      "nameRequired": "الاسم مطلوب",
+      "addressRequired": "العنوان مطلوب",
+      "phoneInvalid": "رقم هاتف غير صحيح"
+    }
+  },
+
+  "whatsapp": {
+    "header": "🍗 طلب جديد من هات",
+    "nameLabel": "👤 الاسم:",
+    "addressLabel": "📍 العنوان:",
+    "phoneLabel": "📞 الهاتف:",
+    "itemsLabel": "📋 الطلب:",
+    "totalLabel": "💰 الإجمالي:",
+    "currency": "جنيه"
+  },
+
+  "home": {
+    "orderSuccess": "✅ تم استلام طلبك! سيتواصل معك فريقنا قريباً"
+  },
+
+  "admin": {
+    "dashboardTitle": "لوحة التحكم — هات 🍗",
+    "ordersTotal": "طلب إجمالي",
+    "loading": "جاري التحميل...",
+    "noOrders": "لا توجد طلبات بعد",
+    "markDoneButton": "تم التسليم ✅",
+    "currency": "جنيه",
+    "status": {
+      "pending": "قيد التجهيز ⏳",
+      "done": "تم التسليم ✅"
+    }
+  },
+
+  "footer": {
+    "tagline": "دجاج مشوي طازج — توصيل سريع لبابك",
+    "copyright": "جميع الحقوق محفوظة © هات"
+  },
+
+  "menuItems": [
+    {
+      "id": 1,
+      "name": "فرخة كاملة",
+      "price": 240,
+      "image": "/full-chicken.png",
+      "includes": ["أرز", "سلطة", "طحينة", "خبز"]
+    },
+    {
+      "id": 2,
+      "name": "نص فرخة",
+      "price": 130,
+      "image": "/half-chicken.png",
+      "includes": ["أرز", "سلطة", "طحينة", "خبز"]
+    },
+    {
+      "id": 3,
+      "name": "ربع فرخة",
+      "price": 70,
+      "image": "/quarter-chicken.png",
+      "includes": ["أرز", "سلطة", "طحينة", "خبز"]
+    }
+  ],
+
+  "extras": [
+    { "id": 101, "name": "بيبسي", "price": 20, "emoji": "🥤" },
+    { "id": 102, "name": "شيبسي", "price": 15, "emoji": "🍟" },
+    { "id": 103, "name": "أرز إضافي", "price": 20, "emoji": "🍚" },
+    { "id": 104, "name": "سلطة إضافية", "price": 15, "emoji": "🥗" }
+  ]
+}
