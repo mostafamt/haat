@@ -5,12 +5,14 @@ import CartBar from '../components/CartBar';
 import CheckoutModal from '../components/CheckoutModal';
 import Footer from '../components/Footer';
 import ItemModal from '../components/ItemModal';
+import MyOrders from '../components/MyOrders';
 import { menuItems, extras } from '../data/menuItems';
 import content from '../data/content.json';
 
 const { menu, home } = content;
 
 export default function Home() {
+  const [tab, setTab] = useState('menu');
   const [cart, setCart] = useState({});
   const [showCheckout, setShowCheckout] = useState(false);
   const [orderDone, setOrderDone] = useState(false);
@@ -57,35 +59,57 @@ export default function Home() {
         </div>
       )}
 
-      <div ref={menuRef} className="max-w-lg mx-auto px-4 py-8">
-        <h2 className="text-2xl font-black text-gray-800 mb-4 text-center">{menu.sectionTitle}</h2>
-        <div className="grid gap-4">
-          {menuItems.map(item => (
-            <MenuCard
-              key={item.id}
-              item={item}
-              quantity={getQty(item.id)}
-              onAdd={() => addItem(item)}
-              onRemove={() => removeItem(item)}
-              onOpen={() => setSelectedItem(item)}
-            />
-          ))}
-        </div>
-
-        <h2 className="text-2xl font-black text-gray-800 mt-8 mb-4 text-center">{menu.extrasSectionTitle}</h2>
-        <div className="grid grid-cols-2 gap-3">
-          {extras.map(item => (
-            <MenuCard
-              key={item.id}
-              item={item}
-              quantity={getQty(item.id)}
-              onAdd={() => addItem(item)}
-              onRemove={() => removeItem(item)}
-              onOpen={() => setSelectedItem(item)}
-            />
-          ))}
+      {/* Tab switcher */}
+      <div className="max-w-lg mx-auto px-4 pt-4">
+        <div className="flex bg-white rounded-2xl p-1 shadow-sm">
+          <button
+            onClick={() => setTab('menu')}
+            className={`flex-1 py-2.5 rounded-xl font-bold text-sm transition-colors ${tab === 'menu' ? 'bg-red-600 text-white' : 'text-gray-500 hover:text-gray-700'}`}
+          >
+            {home.tabs.menu}
+          </button>
+          <button
+            onClick={() => setTab('myOrders')}
+            className={`flex-1 py-2.5 rounded-xl font-bold text-sm transition-colors ${tab === 'myOrders' ? 'bg-red-600 text-white' : 'text-gray-500 hover:text-gray-700'}`}
+          >
+            {home.tabs.myOrders}
+          </button>
         </div>
       </div>
+
+      {tab === 'menu' && (
+        <div ref={menuRef} className="max-w-lg mx-auto px-4 py-8">
+          <h2 className="text-2xl font-black text-gray-800 mb-4 text-center">{menu.sectionTitle}</h2>
+          <div className="grid gap-4">
+            {menuItems.map(item => (
+              <MenuCard
+                key={item.id}
+                item={item}
+                quantity={getQty(item.id)}
+                onAdd={() => addItem(item)}
+                onRemove={() => removeItem(item)}
+                onOpen={() => setSelectedItem(item)}
+              />
+            ))}
+          </div>
+
+          <h2 className="text-2xl font-black text-gray-800 mt-8 mb-4 text-center">{menu.extrasSectionTitle}</h2>
+          <div className="grid grid-cols-2 gap-3">
+            {extras.map(item => (
+              <MenuCard
+                key={item.id}
+                item={item}
+                quantity={getQty(item.id)}
+                onAdd={() => addItem(item)}
+                onRemove={() => removeItem(item)}
+                onOpen={() => setSelectedItem(item)}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {tab === 'myOrders' && <MyOrders />}
 
       <div className="pb-24" />
 

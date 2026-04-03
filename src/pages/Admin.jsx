@@ -12,6 +12,7 @@ export default function Admin() {
   // ── Orders state ──────────────────────────────────────────
   const [orders, setOrders] = useState([]);
   const [ordersLoading, setOrdersLoading] = useState(true);
+  const [orderSearch, setOrderSearch] = useState('');
 
   useEffect(() => {
     const q = query(collection(db, 'orders'), orderBy('timestamp', 'desc'));
@@ -155,17 +156,39 @@ export default function Admin() {
         {/* ── Orders Tab ── */}
         {tab === 'orders' && (
           <div className="flex flex-col gap-4">
+            {/* Search box */}
+            <div className="relative">
+              <input
+                type="number"
+                value={orderSearch}
+                onChange={e => setOrderSearch(e.target.value)}
+                placeholder={admin.searchPlaceholder}
+                className="w-full border border-gray-200 bg-white rounded-xl px-4 py-3 text-right focus:outline-none focus:ring-2 focus:ring-red-400 shadow-sm"
+              />
+              {orderSearch && (
+                <button
+                  onClick={() => setOrderSearch('')}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-lg leading-none"
+                >✕</button>
+              )}
+            </div>
+
             {ordersLoading && <p className="text-center text-gray-500 py-10">{admin.loading}</p>}
             {!ordersLoading && orders.length === 0 && (
               <p className="text-center text-gray-500 py-10">{admin.noOrders}</p>
             )}
-            {orders.map(order => (
+            {orders
+              .filter(o => !orderSearch.trim() || String(o.orderNumber).includes(orderSearch.trim()))
+              .map(order => (
               <div
                 key={order.id}
                 className={`bg-white rounded-2xl p-4 shadow-md border-r-4 ${order.status === 'done' ? 'border-green-500' : 'border-amber-400'}`}
               >
                 <div className="flex items-start justify-between mb-3">
                   <div>
+                    {order.orderNumber && (
+                      <p className="text-xs font-bold text-gray-400 mb-0.5">#{order.orderNumber}</p>
+                    )}
                     <p className="font-black text-gray-800 text-lg">{order.name}</p>
                     <p className="text-gray-500 text-sm">📞 {order.phone}</p>
                     <p className="text-gray-500 text-sm">📍 {order.address}</p>

@@ -92,13 +92,39 @@
     "phoneLabel": "📞 الهاتف:",
     "itemsLabel": "📋 الطلب:",
     "totalLabel": "💰 الإجمالي:",
+    "orderNumberLabel": "🔢 رقم الطلب:",
     "prepTimeLabel": "⏳ وقت التحضير المتوقع:",
     "discountLabel": "💸 خصم",
     "currency": "جنيه"
   },
 
   "home": {
-    "orderSuccess": "✅ تم استلام طلبك! سيتواصل معك فريقنا قريباً"
+    "orderSuccess": "✅ تم استلام طلبك! سيتواصل معك فريقنا قريباً",
+    "tabs": {
+      "menu": "القائمة",
+      "myOrders": "طلباتي"
+    }
+  },
+
+  "myOrders": {
+    "title": "تتبع طلباتك",
+    "phonePlaceholder": "أدخل رقم هاتفك",
+    "lookupButton": "عرض طلباتي",
+    "lookupLoading": "جاري البحث...",
+    "phoneInvalid": "أدخل رقم هاتف صحيح",
+    "noOrders": "لا توجد طلبات مسجلة لهذا الرقم",
+    "orderNumber": "رقم الطلب",
+    "orderLabel": "طلب رقم",
+    "dateLabel": "التاريخ",
+    "totalLabel": "الإجمالي",
+    "itemsLabel": "التفاصيل",
+    "discountLabel": "خصم",
+    "deliveryLabel": "توصيل",
+    "currency": "جنيه",
+    "status": {
+      "pending": "قيد التجهيز ⏳",
+      "done": "تم التسليم ✅"
+    }
   },
 
   "admin": {
@@ -106,6 +132,7 @@
     "ordersTotal": "طلب إجمالي",
     "loading": "جاري التحميل...",
     "noOrders": "لا توجد طلبات بعد",
+    "searchPlaceholder": "ابحث برقم الطلب...",
     "markDoneButton": "تم التسليم ✅",
     "currency": "جنيه",
     "status": {

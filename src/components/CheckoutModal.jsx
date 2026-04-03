@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Phone, MapPin, User, X, Clock, Truck, Tag } from 'lucide-react';
-import { collection, addDoc, serverTimestamp, getDocs, query, where, getDoc, setDoc, doc, increment } from 'firebase/firestore';
+import { collection, runTransaction, serverTimestamp, getDocs, query, where, getDoc, setDoc, doc, increment } from 'firebase/firestore';
 import { db } from '../firebase';
 import content from '../data/content.json';
 
@@ -133,19 +133,29 @@ export default function CheckoutModal({ cart, total, onClose, onSuccess }) {
       const name  = form.name.trim();
       const address = form.address.trim();
 
-      await addDoc(collection(db, 'orders'), {
-        name,
-        address,
-        phone,
-        zone: selectedZone.name,
-        items,
-        subtotal,
-        discount,
-        promoCode: appliedPromo ? appliedPromo.code : null,
-        total: grandTotal,
-        deliveryPrice,
-        status: 'pending',
-        timestamp: serverTimestamp(),
+      const counterRef = doc(db, 'meta', 'counters');
+      const newOrderRef = doc(collection(db, 'orders'));
+      let orderNumber;
+
+      await runTransaction(db, async (txn) => {
+        const counterSnap = await txn.get(counterRef);
+        orderNumber = (counterSnap.exists() ? counterSnap.data().orderCount : 1000) + 1;
+        txn.set(counterRef, { orderCount: orderNumber }, { merge: true });
+        txn.set(newOrderRef, {
+          orderNumber,
+          name,
+          address,
+          phone,
+          zone: selectedZone.name,
+          items,
+          subtotal,
+          discount,
+          promoCode: appliedPromo ? appliedPromo.code : null,
+          total: grandTotal,
+          deliveryPrice,
+          status: 'pending',
+          timestamp: serverTimestamp(),
+        });
       });
 
       // Upsert user document — create on first order, update counts on repeat orders
@@ -165,7 +175,7 @@ export default function CheckoutModal({ cart, total, onClose, onSuccess }) {
       const itemsList = cart.map(i => `${i.name} = ${i.price} × ${i.quantity} = ${i.price * i.quantity} ${whatsapp.currency}`).join('\n');
       const discountLine = appliedPromo ? `\n${whatsapp.discountLabel} (${appliedPromo.code}): - ${discount} ${whatsapp.currency}` : '';
       const msg = encodeURIComponent(
-        `${whatsapp.header}\n\n${whatsapp.nameLabel} ${name}\n${whatsapp.addressLabel} ${address}\n${whatsapp.phoneLabel} ${phone}\n${delivery.zoneWhatsappLabel} ${selectedZone.name}\n\n${whatsapp.itemsLabel}\n${itemsList}${discountLine}\n\n${delivery.whatsappLabel} ${deliveryPrice} ${delivery.currency}\n${whatsapp.totalLabel} ${grandTotal} ${whatsapp.currency}\n${whatsapp.prepTimeLabel} ${maxPrepTime}`
+        `${whatsapp.header}\n${whatsapp.orderNumberLabel} #${orderNumber}\n\n${whatsapp.nameLabel} ${name}\n${whatsapp.addressLabel} ${address}\n${whatsapp.phoneLabel} ${phone}\n${delivery.zoneWhatsappLabel} ${selectedZone.name}\n\n${whatsapp.itemsLabel}\n${itemsList}${discountLine}\n\n${delivery.whatsappLabel} ${deliveryPrice} ${delivery.currency}\n${whatsapp.totalLabel} ${grandTotal} ${whatsapp.currency}\n${whatsapp.prepTimeLabel} ${maxPrepTime}`
       );
       window.open(`https://wa.me/${number}?text=${msg}`, '_blank');
       onSuccess();
