@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Phone, MapPin, User, X, Clock, Truck, Tag } from 'lucide-react';
-import { collection, addDoc, serverTimestamp, getDocs, query, where, getDoc, doc } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, getDocs, query, where, getDoc, setDoc, doc, increment } from 'firebase/firestore';
 import { db } from '../firebase';
 import content from '../data/content.json';
 
@@ -129,10 +129,14 @@ export default function CheckoutModal({ cart, total, onClose, onSuccess }) {
         price: i.price,
         quantity: i.quantity,
       }));
+      const phone = form.phone.trim();
+      const name  = form.name.trim();
+      const address = form.address.trim();
+
       await addDoc(collection(db, 'orders'), {
-        name: form.name.trim(),
-        address: form.address.trim(),
-        phone: form.phone.trim(),
+        name,
+        address,
+        phone,
         zone: selectedZone.name,
         items,
         subtotal,
@@ -144,11 +148,24 @@ export default function CheckoutModal({ cart, total, onClose, onSuccess }) {
         timestamp: serverTimestamp(),
       });
 
+      // Upsert user document — create on first order, update counts on repeat orders
+      const userRef = doc(db, 'users', phone);
+      const userSnap = await getDoc(userRef);
+      await setDoc(userRef, {
+        name,
+        phone,
+        address,
+        lastOrderAt: serverTimestamp(),
+        orderCount: increment(1),
+        totalSpent: increment(grandTotal),
+        ...(!userSnap.exists() && { firstOrderAt: serverTimestamp() }),
+      }, { merge: true });
+
       const number = import.meta.env.VITE_WHATSAPP_NUMBER || '201000000000';
       const itemsList = cart.map(i => `${i.name} = ${i.price} × ${i.quantity} = ${i.price * i.quantity} ${whatsapp.currency}`).join('\n');
       const discountLine = appliedPromo ? `\n${whatsapp.discountLabel} (${appliedPromo.code}): - ${discount} ${whatsapp.currency}` : '';
       const msg = encodeURIComponent(
-        `${whatsapp.header}\n\n${whatsapp.nameLabel} ${form.name}\n${whatsapp.addressLabel} ${form.address}\n${whatsapp.phoneLabel} ${form.phone}\n${delivery.zoneWhatsappLabel} ${selectedZone.name}\n\n${whatsapp.itemsLabel}\n${itemsList}${discountLine}\n\n${delivery.whatsappLabel} ${deliveryPrice} ${delivery.currency}\n${whatsapp.totalLabel} ${grandTotal} ${whatsapp.currency}\n${whatsapp.prepTimeLabel} ${maxPrepTime}`
+        `${whatsapp.header}\n\n${whatsapp.nameLabel} ${name}\n${whatsapp.addressLabel} ${address}\n${whatsapp.phoneLabel} ${phone}\n${delivery.zoneWhatsappLabel} ${selectedZone.name}\n\n${whatsapp.itemsLabel}\n${itemsList}${discountLine}\n\n${delivery.whatsappLabel} ${deliveryPrice} ${delivery.currency}\n${whatsapp.totalLabel} ${grandTotal} ${whatsapp.currency}\n${whatsapp.prepTimeLabel} ${maxPrepTime}`
       );
       window.open(`https://wa.me/${number}?text=${msg}`, '_blank');
       onSuccess();

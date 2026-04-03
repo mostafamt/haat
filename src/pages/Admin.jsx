@@ -4,7 +4,7 @@ import { db } from '../firebase';
 import content from '../data/content.json';
 
 const { admin } = content;
-const { promos } = admin;
+const { promos, customers: customersContent } = admin;
 
 export default function Admin() {
   const [tab, setTab] = useState('orders');
@@ -25,6 +25,19 @@ export default function Admin() {
   const markDone = async (id) => {
     await updateDoc(doc(db, 'orders', id), { status: 'done' });
   };
+
+  // ── Customers state ───────────────────────────────────────
+  const [customers, setCustomers] = useState([]);
+  const [customersLoading, setCustomersLoading] = useState(false);
+
+  useEffect(() => {
+    if (tab !== 'customers') return;
+    setCustomersLoading(true);
+    getDocs(query(collection(db, 'users'), orderBy('lastOrderAt', 'desc'))).then(snap => {
+      setCustomers(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      setCustomersLoading(false);
+    });
+  }, [tab]);
 
   // ── Promo codes state ──────────────────────────────────────
   const [promoCodes, setPromoCodes] = useState([]);
@@ -126,6 +139,12 @@ export default function Admin() {
             {admin.tabs.orders}
           </button>
           <button
+            onClick={() => setTab('customers')}
+            className={`flex-1 py-2.5 rounded-xl font-bold text-sm transition-colors ${tab === 'customers' ? 'bg-red-600 text-white' : 'text-gray-500 hover:text-gray-700'}`}
+          >
+            {admin.tabs.customers}
+          </button>
+          <button
             onClick={() => setTab('promos')}
             className={`flex-1 py-2.5 rounded-xl font-bold text-sm transition-colors ${tab === 'promos' ? 'bg-red-600 text-white' : 'text-gray-500 hover:text-gray-700'}`}
           >
@@ -188,6 +207,43 @@ export default function Admin() {
                     {admin.markDoneButton}
                   </button>
                 )}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* ── Customers Tab ── */}
+        {tab === 'customers' && (
+          <div className="flex flex-col gap-4">
+            {customersLoading && <p className="text-center text-gray-500 py-10">{admin.loading}</p>}
+            {!customersLoading && customers.length === 0 && (
+              <p className="text-center text-gray-500 py-10">{customersContent.noCustomers}</p>
+            )}
+            {customers.map(c => (
+              <div key={c.id} className="bg-white rounded-2xl p-4 shadow-md border-r-4 border-blue-400">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1 min-w-0">
+                    <p className="font-black text-gray-800 text-lg">{c.name}</p>
+                    <p className="text-gray-500 text-sm mt-0.5">📞 {c.phone}</p>
+                    <p className="text-gray-400 text-xs mt-0.5 truncate">📍 {c.address}</p>
+                    <div className="flex gap-3 mt-1">
+                      {c.firstOrderAt && (
+                        <p className="text-gray-400 text-xs">
+                          {customersContent.firstOrder}: {c.firstOrderAt.toDate().toLocaleDateString('ar-EG')}
+                        </p>
+                      )}
+                      {c.lastOrderAt && (
+                        <p className="text-gray-400 text-xs">
+                          {customersContent.lastOrder}: {c.lastOrderAt.toDate().toLocaleDateString('ar-EG')}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  <div className="text-left mr-3 shrink-0">
+                    <p className="text-blue-600 font-black text-lg">{c.orderCount} {customersContent.ordersCount}</p>
+                    <p className="text-gray-500 text-sm font-bold mt-0.5">{c.totalSpent} {admin.currency}</p>
+                  </div>
+                </div>
               </div>
             ))}
           </div>

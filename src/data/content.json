@@ -1,7 +1,7 @@
 {
   "brand": {
     "name": "هات",
-    "tagline": "أصل المشوي واللقمة الهنية",
+    "tagline": "أصل المشويات",
     "description": "دجاج مشوي طازج — توصيل سريع لبابك",
     "logo": "/logo.png"
   },
@@ -114,7 +114,15 @@
     },
     "tabs": {
       "orders": "الطلبات",
-      "promos": "أكواد الخصم"
+      "promos": "أكواد الخصم",
+      "customers": "العملاء"
+    },
+    "customers": {
+      "noCustomers": "لا يوجد عملاء بعد",
+      "ordersCount": "طلب",
+      "totalSpent": "إجمالي الإنفاق",
+      "lastOrder": "آخر طلب",
+      "firstOrder": "أول طلب"
     },
     "promos": {
       "title": "أكواد الخصم",
