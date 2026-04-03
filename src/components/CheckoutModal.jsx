@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { Phone, MapPin, User, X, Clock, Truck } from 'lucide-react';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { Phone, MapPin, User, X, Clock, Truck, Tag } from 'lucide-react';
+import { collection, addDoc, serverTimestamp, getDocs, query, where, getDoc, doc } from 'firebase/firestore';
 import { db } from '../firebase';
 import content from '../data/content.json';
 
 const { checkout, whatsapp, delivery } = content;
+const { promo } = checkout;
 
 function getMaxPrepTime(cart) {
   const best = cart.reduce((max, item) => (item.prepMinutes ?? 0) > (max.prepMinutes ?? 0) ? item : max, cart[0]);
@@ -16,10 +17,17 @@ export default function CheckoutModal({ cart, total, onClose, onSuccess }) {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
 
+  const [promoInput, setPromoInput] = useState('');
+  const [promoChecking, setPromoChecking] = useState(false);
+  const [promoError, setPromoError] = useState('');
+  const [appliedPromo, setAppliedPromo] = useState(null);
+  const [discount, setDiscount] = useState(0);
+
   const maxPrepTime = getMaxPrepTime(cart);
   const selectedZone = form.zoneId !== '' ? delivery.zones[Number(form.zoneId)] : null;
   const deliveryPrice = selectedZone ? selectedZone.price : 0;
-  const grandTotal = total + deliveryPrice;
+  const subtotal = total;
+  const grandTotal = subtotal - discount + deliveryPrice;
 
   const validate = () => {
     const e = {};
@@ -28,6 +36,80 @@ export default function CheckoutModal({ cart, total, onClose, onSuccess }) {
     if (!form.phone.trim() || !/^01[0-9]{9}$/.test(form.phone.trim())) e.phone = checkout.validation.phoneInvalid;
     if (!form.zoneId) e.zone = delivery.zoneRequired;
     return e;
+  };
+
+  const handlePhoneChange = (val) => {
+    setForm({ ...form, phone: val });
+    if (appliedPromo) {
+      setAppliedPromo(null);
+      setDiscount(0);
+      setPromoError('');
+    }
+  };
+
+  const applyPromo = async () => {
+    const phone = form.phone.trim();
+    const code = promoInput.trim().toUpperCase();
+
+    if (!phone || !/^01[0-9]{9}$/.test(phone)) {
+      setPromoError(promo.errors.phoneRequired);
+      return;
+    }
+    if (!code) return;
+
+    setPromoChecking(true);
+    setPromoError('');
+
+    try {
+      // Step 1: fetch promo code document
+      const promoDoc = await getDoc(doc(db, 'promo_codes', code));
+      if (!promoDoc.exists()) {
+        setPromoError(promo.errors.invalidCode);
+        return;
+      }
+      const promoData = promoDoc.data();
+      if (!promoData.active) {
+        setPromoError(promo.errors.inactiveCode);
+        return;
+      }
+      if (promoData.expires_at && promoData.expires_at.toDate() < new Date()) {
+        setPromoError(promo.errors.expiredCode);
+        return;
+      }
+
+      // Step 2: check if this phone has already used this code on any order
+      const ordersSnap = await getDocs(
+        query(collection(db, 'orders'), where('phone', '==', phone))
+      );
+      const alreadyUsed = ordersSnap.docs.some(d => d.data().promoCode === code);
+      if (alreadyUsed) {
+        setPromoError(promo.errors.alreadyUsed);
+        return;
+      }
+
+      // Step 3: calculate discount amount
+      let discountAmount = 0;
+      if (promoData.discount_type === 'percent') {
+        discountAmount = Math.round(subtotal * promoData.discount_value / 100);
+      } else {
+        discountAmount = Math.min(promoData.discount_value, subtotal);
+      }
+
+      setAppliedPromo({ code, discount_type: promoData.discount_type, discount_value: promoData.discount_value });
+      setDiscount(discountAmount);
+    } catch (err) {
+      console.error(err);
+      setPromoError(promo.errors.networkError);
+    } finally {
+      setPromoChecking(false);
+    }
+  };
+
+  const removePromo = () => {
+    setAppliedPromo(null);
+    setDiscount(0);
+    setPromoInput('');
+    setPromoError('');
   };
 
   const handleSubmit = async (e) => {
@@ -48,6 +130,9 @@ export default function CheckoutModal({ cart, total, onClose, onSuccess }) {
         phone: form.phone.trim(),
         zone: selectedZone.name,
         items,
+        subtotal,
+        discount,
+        promoCode: appliedPromo ? appliedPromo.code : null,
         total: grandTotal,
         deliveryPrice,
         status: 'pending',
@@ -56,8 +141,9 @@ export default function CheckoutModal({ cart, total, onClose, onSuccess }) {
 
       const number = import.meta.env.VITE_WHATSAPP_NUMBER || '201000000000';
       const itemsList = cart.map(i => `${i.name} = ${i.price} × ${i.quantity} = ${i.price * i.quantity} ${whatsapp.currency}`).join('\n');
+      const discountLine = appliedPromo ? `\n${whatsapp.discountLabel} (${appliedPromo.code}): - ${discount} ${whatsapp.currency}` : '';
       const msg = encodeURIComponent(
-        `${whatsapp.header}\n\n${whatsapp.nameLabel} ${form.name}\n${whatsapp.addressLabel} ${form.address}\n${whatsapp.phoneLabel} ${form.phone}\n${delivery.zoneWhatsappLabel} ${selectedZone.name}\n\n${whatsapp.itemsLabel}\n${itemsList}\n\n${delivery.whatsappLabel} ${deliveryPrice} ${delivery.currency}\n${whatsapp.totalLabel} ${grandTotal} ${whatsapp.currency}\n${whatsapp.prepTimeLabel} ${maxPrepTime}`
+        `${whatsapp.header}\n\n${whatsapp.nameLabel} ${form.name}\n${whatsapp.addressLabel} ${form.address}\n${whatsapp.phoneLabel} ${form.phone}\n${delivery.zoneWhatsappLabel} ${selectedZone.name}\n\n${whatsapp.itemsLabel}\n${itemsList}${discountLine}\n\n${delivery.whatsappLabel} ${deliveryPrice} ${delivery.currency}\n${whatsapp.totalLabel} ${grandTotal} ${whatsapp.currency}\n${whatsapp.prepTimeLabel} ${maxPrepTime}`
       );
       window.open(`https://wa.me/${number}?text=${msg}`, '_blank');
       onSuccess();
@@ -88,6 +174,12 @@ export default function CheckoutModal({ cart, total, onClose, onSuccess }) {
               <span className="font-bold">{item.price * item.quantity} {checkout.currency}</span>
             </div>
           ))}
+          {discount > 0 && (
+            <div className="flex justify-between text-sm text-green-600 py-1">
+              <span>{promo.discountLabel} ({appliedPromo.code})</span>
+              <span className="font-bold">- {discount} {checkout.currency}</span>
+            </div>
+          )}
           <div className="flex justify-between text-sm text-gray-600 py-1">
             <span>{delivery.label}{selectedZone ? ` (${selectedZone.name})` : ''}</span>
             <span className="font-bold">{selectedZone ? `${deliveryPrice} ${delivery.currency}` : '—'}</span>
@@ -163,11 +255,48 @@ export default function CheckoutModal({ cart, total, onClose, onSuccess }) {
             <input
               type="tel"
               value={form.phone}
-              onChange={e => setForm({ ...form, phone: e.target.value })}
+              onChange={e => handlePhoneChange(e.target.value)}
               placeholder={checkout.phonePlaceholder}
               className={`w-full border ${errors.phone ? 'border-red-400' : 'border-gray-200'} rounded-xl px-4 py-3 text-right focus:outline-none focus:ring-2 focus:ring-red-400`}
             />
             {errors.phone && <p className="text-red-500 text-xs mt-1">{errors.phone}</p>}
+          </div>
+
+          {/* Promo Code */}
+          <div>
+            <label className="block text-sm font-bold text-gray-700 mb-1">
+              <Tag size={14} className="inline ml-1" />{promo.label}
+            </label>
+            {appliedPromo ? (
+              <div className="flex items-center justify-between bg-green-50 border border-green-200 rounded-xl px-4 py-3">
+                <span className="text-green-700 font-bold text-sm">
+                  ✓ {promo.successPrefix} {appliedPromo.code} — {promo.successSuffix} {discount} {checkout.currency}
+                </span>
+                <button type="button" onClick={removePromo} className="text-gray-400 hover:text-red-500 mr-2">
+                  <X size={16} />
+                </button>
+              </div>
+            ) : (
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={promoInput}
+                  onChange={e => { setPromoInput(e.target.value.toUpperCase()); setPromoError(''); }}
+                  placeholder={promo.placeholder}
+                  disabled={promoChecking}
+                  className="flex-1 border border-gray-200 rounded-xl px-4 py-3 text-right focus:outline-none focus:ring-2 focus:ring-red-400"
+                />
+                <button
+                  type="button"
+                  onClick={applyPromo}
+                  disabled={promoChecking || !promoInput.trim()}
+                  className="bg-gray-800 text-white font-bold px-4 py-3 rounded-xl hover:bg-gray-700 disabled:opacity-50 transition-colors whitespace-nowrap"
+                >
+                  {promoChecking ? promo.checkingButton : promo.applyButton}
+                </button>
+              </div>
+            )}
+            {promoError && <p className="text-red-500 text-xs mt-1">{promoError}</p>}
           </div>
 
           <button

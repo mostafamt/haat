@@ -63,6 +63,24 @@
       "nameRequired": "الاسم مطلوب",
       "addressRequired": "العنوان مطلوب",
       "phoneInvalid": "رقم هاتف غير صحيح"
+    },
+    "promo": {
+      "label": "كود الخصم (اختياري)",
+      "placeholder": "أدخل الكود",
+      "applyButton": "تطبيق",
+      "checkingButton": "جاري التحقق...",
+      "removeButton": "إلغاء الكود",
+      "successPrefix": "تم تطبيق",
+      "successSuffix": "وفّرت",
+      "discountLabel": "خصم",
+      "errors": {
+        "phoneRequired": "أدخل رقم هاتف صحيح أولاً لتطبيق الكود",
+        "invalidCode": "كود الخصم غير صحيح",
+        "inactiveCode": "هذا الكود غير متاح حالياً",
+        "expiredCode": "انتهت صلاحية هذا الكود",
+        "alreadyUsed": "هذا الكود مستخدم مسبقاً مع هذا الرقم",
+        "networkError": "تعذّر التحقق من الكود، حاول مرة أخرى"
+      }
     }
   },
 
@@ -74,6 +92,7 @@
     "itemsLabel": "📋 الطلب:",
     "totalLabel": "💰 الإجمالي:",
     "prepTimeLabel": "⏳ وقت التحضير المتوقع:",
+    "discountLabel": "💸 خصم",
     "currency": "جنيه"
   },
 
@@ -91,6 +110,37 @@
     "status": {
       "pending": "قيد التجهيز ⏳",
       "done": "تم التسليم ✅"
+    },
+    "tabs": {
+      "orders": "الطلبات",
+      "promos": "أكواد الخصم"
+    },
+    "promos": {
+      "title": "أكواد الخصم",
+      "noPromos": "لا توجد أكواد بعد",
+      "addTitle": "إضافة كود جديد",
+      "codePlaceholder": "الكود (مثال: SAVE20)",
+      "discountTypLabel": "نوع الخصم",
+      "typePercent": "نسبة مئوية (%)",
+      "typeFlat": "مبلغ ثابت (جنيه)",
+      "discountValuePlaceholder": "قيمة الخصم",
+      "expiryLabel": "تاريخ الانتهاء (اختياري)",
+      "addButton": "إضافة الكود",
+      "addingButton": "جاري الإضافة...",
+      "activeBadge": "فعّال",
+      "inactiveBadge": "موقوف",
+      "toggleActivate": "تفعيل",
+      "toggleDeactivate": "إيقاف",
+      "discountPercent": "خصم %",
+      "discountFlat": "خصم جنيه",
+      "noExpiry": "بدون انتهاء",
+      "errors": {
+        "codeRequired": "أدخل الكود",
+        "valueRequired": "أدخل قيمة الخصم",
+        "valueInvalid": "القيمة يجب أن تكون أكبر من صفر",
+        "codeExists": "هذا الكود موجود بالفعل",
+        "saveFailed": "فشل الحفظ، حاول مرة أخرى"
+      }
     }
   },
 
