@@ -79,6 +79,7 @@
         "inactiveCode": "هذا الكود غير متاح حالياً",
         "expiredCode": "انتهت صلاحية هذا الكود",
         "alreadyUsed": "هذا الكود مستخدم مسبقاً مع هذا الرقم",
+        "limitReached": "عذراً، تم الوصول للحد الأقصى لهذا الكود",
         "networkError": "تعذّر التحقق من الكود، حاول مرة أخرى"
       }
     }
@@ -125,6 +126,8 @@
       "typeFlat": "مبلغ ثابت (جنيه)",
       "discountValuePlaceholder": "قيمة الخصم",
       "expiryLabel": "تاريخ الانتهاء (اختياري)",
+      "maxUsesLabel": "حد الاستخدام (عدد أرقام مختلفة)",
+      "maxUsesPlaceholder": "مثال: 20 (اتركه فارغاً = غير محدود)",
       "addButton": "إضافة الكود",
       "addingButton": "جاري الإضافة...",
       "activeBadge": "فعّال",
@@ -134,6 +137,9 @@
       "discountPercent": "خصم %",
       "discountFlat": "خصم جنيه",
       "noExpiry": "بدون انتهاء",
+      "unlimited": "غير محدود",
+      "usageCount": "استُخدم بواسطة",
+      "usageOf": "من أصل",
       "errors": {
         "codeRequired": "أدخل الكود",
         "valueRequired": "أدخل قيمة الخصم",

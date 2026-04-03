@@ -77,13 +77,18 @@ export default function CheckoutModal({ cart, total, onClose, onSuccess }) {
         return;
       }
 
-      // Step 2: check if this phone has already used this code on any order
-      const ordersSnap = await getDocs(
-        query(collection(db, 'orders'), where('phone', '==', phone))
+      // Step 2: fetch all orders that used this code, check per-phone reuse and global limit
+      const usageSnap = await getDocs(
+        query(collection(db, 'orders'), where('promoCode', '==', code))
       );
-      const alreadyUsed = ordersSnap.docs.some(d => d.data().promoCode === code);
-      if (alreadyUsed) {
+      const usedPhones = [...new Set(usageSnap.docs.map(d => d.data().phone))];
+
+      if (usedPhones.includes(phone)) {
         setPromoError(promo.errors.alreadyUsed);
+        return;
+      }
+      if (promoData.max_uses !== null && usedPhones.length >= promoData.max_uses) {
+        setPromoError(promo.errors.limitReached);
         return;
       }
 

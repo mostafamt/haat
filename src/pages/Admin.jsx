@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { collection, query, orderBy, onSnapshot, doc, updateDoc, setDoc, getDoc, getDocs } from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot, doc, updateDoc, setDoc, getDoc, getDocs, where } from 'firebase/firestore';
 import { db } from '../firebase';
 import content from '../data/content.json';
 
@@ -29,7 +29,7 @@ export default function Admin() {
   // ── Promo codes state ──────────────────────────────────────
   const [promoCodes, setPromoCodes] = useState([]);
   const [promosLoading, setPromosLoading] = useState(false);
-  const [promoForm, setPromoForm] = useState({ code: '', discount_type: 'percent', discount_value: '', expires_at: '' });
+  const [promoForm, setPromoForm] = useState({ code: '', discount_type: 'percent', discount_value: '', expires_at: '', max_uses: '' });
   const [promoFormErrors, setPromoFormErrors] = useState({});
   const [promoSaving, setPromoSaving] = useState(false);
   const [promoToggling, setPromoToggling] = useState(null);
@@ -37,8 +37,15 @@ export default function Admin() {
   useEffect(() => {
     if (tab !== 'promos') return;
     setPromosLoading(true);
-    getDocs(collection(db, 'promo_codes')).then(snap => {
-      setPromoCodes(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    getDocs(collection(db, 'promo_codes')).then(async snap => {
+      const codes = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      // fetch unique-phone usage count per code
+      const withCounts = await Promise.all(codes.map(async c => {
+        const usageSnap = await getDocs(query(collection(db, 'orders'), where('promoCode', '==', c.id)));
+        const usedCount = new Set(usageSnap.docs.map(d => d.data().phone)).size;
+        return { ...c, usedCount };
+      }));
+      setPromoCodes(withCounts);
       setPromosLoading(false);
     });
   }, [tab]);
@@ -74,11 +81,12 @@ export default function Admin() {
         discount_value: Number(promoForm.discount_value),
         active: true,
         expires_at: promoForm.expires_at ? new Date(promoForm.expires_at) : null,
+        max_uses: promoForm.max_uses ? Number(promoForm.max_uses) : null,
       };
 
       await setDoc(doc(db, 'promo_codes', code), data);
-      setPromoCodes(prev => [...prev, { id: code, ...data }]);
-      setPromoForm({ code: '', discount_type: 'percent', discount_value: '', expires_at: '' });
+      setPromoCodes(prev => [...prev, { id: code, ...data, usedCount: 0 }]);
+      setPromoForm({ code: '', discount_type: 'percent', discount_value: '', expires_at: '', max_uses: '' });
     } catch (err) {
       console.error(err);
       setPromoFormErrors({ code: promos.errors.saveFailed });
@@ -229,6 +237,19 @@ export default function Admin() {
                 </div>
                 {promoFormErrors.discount_value && <p className="text-red-500 text-xs -mt-2">{promoFormErrors.discount_value}</p>}
 
+                {/* Max uses */}
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">{promos.maxUsesLabel}</label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={promoForm.max_uses}
+                    onChange={e => setPromoForm({ ...promoForm, max_uses: e.target.value })}
+                    placeholder={promos.maxUsesPlaceholder}
+                    className="w-full border border-gray-200 rounded-xl px-4 py-3 text-right focus:outline-none focus:ring-2 focus:ring-red-400"
+                  />
+                </div>
+
                 {/* Expiry date */}
                 <div>
                   <label className="block text-xs text-gray-500 mb-1">{promos.expiryLabel}</label>
@@ -269,6 +290,10 @@ export default function Admin() {
                       {p.expires_at
                         ? (p.expires_at.toDate ? p.expires_at.toDate().toLocaleDateString('ar-EG') : new Date(p.expires_at).toLocaleDateString('ar-EG'))
                         : promos.noExpiry}
+                    </p>
+                    <p className={`text-xs mt-1 font-bold ${p.max_uses !== null && p.usedCount >= p.max_uses ? 'text-red-500' : 'text-gray-500'}`}>
+                      {promos.usageCount} {p.usedCount ?? 0}
+                      {p.max_uses !== null ? ` ${promos.usageOf} ${p.max_uses}` : ` (${promos.unlimited})`}
                     </p>
                   </div>
                   <div className="flex flex-col items-end gap-2">
