@@ -242,9 +242,15 @@
     }
   },
 
+  "contact": {
+    "callLabel": "اتصل بنا",
+    "whatsappLabel": "واتساب"
+  },
+
   "footer": {
     "tagline": "دجاج مشوي طازج — توصيل سريع لبابك",
-    "copyright": "جميع الحقوق محفوظة © هات"
+    "copyright": "جميع الحقوق محفوظة © هات",
+    "contactTitle": "تواصل معنا"
   },
 
   "menuItems": [
