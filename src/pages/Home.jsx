@@ -8,7 +8,6 @@ import CheckoutModal from '../components/CheckoutModal';
 import Footer from '../components/Footer';
 import ItemModal from '../components/ItemModal';
 import MyOrders from '../components/MyOrders';
-import { extras } from '../data/menuItems';
 import content from '../data/content.json';
 
 const { menu, home } = content;
