@@ -17,14 +17,21 @@ export default function Home() {
   const [tab, setTab] = useState('menu');
   const [menuItems, setMenuItems] = useState([]);
   const [menuLoading, setMenuLoading] = useState(true);
+  const [extras, setExtras] = useState([]);
 
   useEffect(() => {
-    const q = query(collection(db, 'menuItems'), orderBy('order', 'asc'));
-    const unsub = onSnapshot(q, snap => {
-      setMenuItems(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-      setMenuLoading(false);
-    });
-    return unsub;
+    const unsubMenu = onSnapshot(
+      query(collection(db, 'menuItems'), orderBy('order', 'asc')),
+      snap => {
+        setMenuItems(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+        setMenuLoading(false);
+      }
+    );
+    const unsubExtras = onSnapshot(
+      query(collection(db, 'extras'), orderBy('order', 'asc')),
+      snap => setExtras(snap.docs.map(d => ({ id: d.id, ...d.data() })))
+    );
+    return () => { unsubMenu(); unsubExtras(); };
   }, []);
   const [cart, setCart] = useState({});
   const [showCheckout, setShowCheckout] = useState(false);

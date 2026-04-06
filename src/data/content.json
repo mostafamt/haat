@@ -209,10 +209,35 @@
       "currency": "جنيه",
       "minutesLabel": "دقيقة",
       "includesLabel": "يشمل:",
+      "itemsSubTab": "الوجبات",
+      "extrasSubTab": "الإضافات",
       "errors": {
         "nameRequired": "اسم الوجبة مطلوب",
         "priceInvalid": "أدخل سعراً صحيحاً أكبر من صفر",
         "saveFailed": "فشل الحفظ، حاول مرة أخرى"
+      },
+      "extras": {
+        "addButton": "إضافة عنصر جديد",
+        "addTitle": "إضافة عنصر جديد",
+        "editTitle": "تعديل العنصر",
+        "saveButton": "حفظ العنصر",
+        "savingButton": "جاري الحفظ...",
+        "cancelButton": "إلغاء",
+        "editButton": "تعديل",
+        "deleteButton": "حذف",
+        "confirmDeleteMsg": "هل أنت متأكد من حذف هذا العنصر؟",
+        "confirmYes": "نعم، احذف",
+        "confirmNo": "إلغاء",
+        "noItems": "لا توجد إضافات بعد",
+        "namePlaceholder": "اسم العنصر",
+        "pricePlaceholder": "السعر بالجنيه",
+        "emojiPlaceholder": "الإيموجي (مثال: 🥤)",
+        "currency": "جنيه",
+        "errors": {
+          "nameRequired": "الاسم مطلوب",
+          "priceInvalid": "أدخل سعراً صحيحاً أكبر من صفر",
+          "saveFailed": "فشل الحفظ، حاول مرة أخرى"
+        }
       }
     }
   },
