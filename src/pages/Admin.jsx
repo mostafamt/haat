@@ -1,10 +1,31 @@
-import { useEffect, useState } from 'react';
-import { collection, query, orderBy, onSnapshot, doc, updateDoc, setDoc, getDoc, getDocs, where } from 'firebase/firestore';
+import { useEffect, useRef, useState } from 'react';
+import {
+  collection, query, orderBy, onSnapshot,
+  doc, updateDoc, setDoc, getDoc, getDocs, where,
+  addDoc, deleteDoc,
+} from 'firebase/firestore';
 import { db } from '../firebase';
+
+const CLOUDINARY_CLOUD = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
+const CLOUDINARY_PRESET = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
+
+async function uploadToCloudinary(file) {
+  const form = new FormData();
+  form.append('file', file);
+  form.append('upload_preset', CLOUDINARY_PRESET);
+  form.append('folder', 'haat/menu');
+  const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD}/image/upload`, {
+    method: 'POST',
+    body: form,
+  });
+  if (!res.ok) throw new Error('Cloudinary upload failed');
+  const data = await res.json();
+  return data.secure_url;
+}
 import content from '../data/content.json';
 
 const { admin } = content;
-const { promos, customers: customersContent } = admin;
+const { promos, customers: customersContent, menu: menuContent } = admin;
 
 export default function Admin() {
   const [tab, setTab] = useState('orders');
@@ -53,7 +74,6 @@ export default function Admin() {
     setPromosLoading(true);
     getDocs(collection(db, 'promo_codes')).then(async snap => {
       const codes = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      // fetch unique-phone usage count per code
       const withCounts = await Promise.all(codes.map(async c => {
         const usageSnap = await getDocs(query(collection(db, 'orders'), where('promoCode', '==', c.id)));
         const usedCount = new Set(usageSnap.docs.map(d => d.data().phone)).size;
@@ -119,6 +139,128 @@ export default function Admin() {
     }
   };
 
+  // ── Menu state ────────────────────────────────────────────
+  const [menuItems, setMenuItems] = useState([]);
+  const [menuLoading, setMenuLoading] = useState(false);
+  const [showMenuForm, setShowMenuForm] = useState(false);
+  const [editingMenuId, setEditingMenuId] = useState(null);
+  const [menuForm, setMenuForm] = useState({
+    name: '', price: '', description: '', prepTime: '', prepMinutes: '', includes: '', image: '',
+  });
+  const [menuFormErrors, setMenuFormErrors] = useState({});
+  const [menuSaving, setMenuSaving] = useState(false);
+  const [menuImageFile, setMenuImageFile] = useState(null);
+  const [menuImagePreview, setMenuImagePreview] = useState('');
+  const [menuDeleteConfirm, setMenuDeleteConfirm] = useState(null);
+  const fileInputRef = useRef(null);
+
+  useEffect(() => {
+    if (tab !== 'menu') return;
+    setMenuLoading(true);
+    const q = query(collection(db, 'menuItems'), orderBy('order', 'asc'));
+    const unsub = onSnapshot(q, snap => {
+      setMenuItems(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      setMenuLoading(false);
+    });
+    return unsub;
+  }, [tab]);
+
+  const resetMenuForm = () => {
+    setShowMenuForm(false);
+    setEditingMenuId(null);
+    setMenuForm({ name: '', price: '', description: '', prepTime: '', prepMinutes: '', includes: '', image: '' });
+    setMenuFormErrors({});
+    setMenuImageFile(null);
+    setMenuImagePreview('');
+    setMenuDeleteConfirm(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const startEditMenuItem = (item) => {
+    setEditingMenuId(item.id);
+    setMenuForm({
+      name: item.name || '',
+      price: item.price?.toString() || '',
+      description: item.description || '',
+      prepTime: item.prepTime || '',
+      prepMinutes: item.prepMinutes?.toString() || '',
+      includes: (item.includes || []).join('، '),
+      image: item.image || '',
+    });
+    setMenuImagePreview(item.image || '');
+    setMenuImageFile(null);
+    setMenuFormErrors({});
+    setShowMenuForm(true);
+    setMenuDeleteConfirm(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const handleMenuImageChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setMenuImageFile(file);
+    setMenuImagePreview(URL.createObjectURL(file));
+  };
+
+  const handleMenuSave = async (e) => {
+    e.preventDefault();
+    const errs = {};
+    if (!menuForm.name.trim()) errs.name = menuContent.errors.nameRequired;
+    const priceNum = Number(menuForm.price);
+    if (!menuForm.price || isNaN(priceNum) || priceNum <= 0) errs.price = menuContent.errors.priceInvalid;
+    if (Object.keys(errs).length) { setMenuFormErrors(errs); return; }
+
+    setMenuSaving(true);
+    setMenuFormErrors({});
+
+    try {
+      let imageUrl = menuForm.image || '';
+
+      if (menuImageFile) {
+        imageUrl = await uploadToCloudinary(menuImageFile);
+      }
+
+      const includesArray = menuForm.includes
+        ? menuForm.includes.split(/[,،]/).map(s => s.trim()).filter(Boolean)
+        : [];
+
+      const data = {
+        name: menuForm.name.trim(),
+        price: priceNum,
+        description: menuForm.description.trim(),
+        prepTime: menuForm.prepTime.trim(),
+        prepMinutes: menuForm.prepMinutes ? Number(menuForm.prepMinutes) : 0,
+        includes: includesArray,
+        image: imageUrl,
+        order: editingMenuId
+          ? (menuItems.find(m => m.id === editingMenuId)?.order ?? menuItems.length)
+          : menuItems.length,
+      };
+
+      if (editingMenuId) {
+        await updateDoc(doc(db, 'menuItems', editingMenuId), data);
+      } else {
+        await addDoc(collection(db, 'menuItems'), data);
+      }
+
+      resetMenuForm();
+    } catch (err) {
+      console.error(err);
+      setMenuFormErrors({ name: menuContent.errors.saveFailed });
+    } finally {
+      setMenuSaving(false);
+    }
+  };
+
+  const handleMenuDelete = async (id) => {
+    try {
+      await deleteDoc(doc(db, 'menuItems', id));
+      setMenuDeleteConfirm(null);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-100 p-4" dir="rtl">
       <div className="max-w-2xl mx-auto">
@@ -132,31 +274,26 @@ export default function Admin() {
         </div>
 
         {/* Tab switcher */}
-        <div className="flex bg-white rounded-2xl p-1 mb-6 shadow-sm">
-          <button
-            onClick={() => setTab('orders')}
-            className={`flex-1 py-2.5 rounded-xl font-bold text-sm transition-colors ${tab === 'orders' ? 'bg-red-600 text-white' : 'text-gray-500 hover:text-gray-700'}`}
-          >
-            {admin.tabs.orders}
-          </button>
-          <button
-            onClick={() => setTab('customers')}
-            className={`flex-1 py-2.5 rounded-xl font-bold text-sm transition-colors ${tab === 'customers' ? 'bg-red-600 text-white' : 'text-gray-500 hover:text-gray-700'}`}
-          >
-            {admin.tabs.customers}
-          </button>
-          <button
-            onClick={() => setTab('promos')}
-            className={`flex-1 py-2.5 rounded-xl font-bold text-sm transition-colors ${tab === 'promos' ? 'bg-red-600 text-white' : 'text-gray-500 hover:text-gray-700'}`}
-          >
-            {admin.tabs.promos}
-          </button>
+        <div className="grid grid-cols-4 bg-white rounded-2xl p-1 mb-6 shadow-sm gap-1">
+          {[
+            { key: 'orders',    label: admin.tabs.orders },
+            { key: 'menu',      label: admin.tabs.menu },
+            { key: 'promos',    label: admin.tabs.promos },
+            { key: 'customers', label: admin.tabs.customers },
+          ].map(({ key, label }) => (
+            <button
+              key={key}
+              onClick={() => { setTab(key); resetMenuForm(); }}
+              className={`py-2.5 rounded-xl font-bold text-sm transition-colors ${tab === key ? 'bg-red-600 text-white' : 'text-gray-500 hover:text-gray-700'}`}
+            >
+              {label}
+            </button>
+          ))}
         </div>
 
         {/* ── Orders Tab ── */}
         {tab === 'orders' && (
           <div className="flex flex-col gap-4">
-            {/* Search box */}
             <div className="relative">
               <input
                 type="number"
@@ -235,6 +372,225 @@ export default function Admin() {
           </div>
         )}
 
+        {/* ── Menu Tab ── */}
+        {tab === 'menu' && (
+          <div className="flex flex-col gap-4">
+
+            {/* Add button */}
+            {!showMenuForm && (
+              <button
+                onClick={() => { resetMenuForm(); setShowMenuForm(true); }}
+                className="w-full bg-red-600 text-white font-black py-3 rounded-xl hover:bg-red-700 transition-colors flex items-center justify-center gap-2"
+              >
+                <span className="text-xl leading-none">+</span>
+                {menuContent.addButton}
+              </button>
+            )}
+
+            {/* Add / Edit form */}
+            {showMenuForm && (
+              <div className="bg-white rounded-2xl p-4 shadow-md">
+                <h2 className="font-black text-gray-800 mb-4 text-lg">
+                  {editingMenuId ? menuContent.editTitle : menuContent.addTitle}
+                </h2>
+
+                <form onSubmit={handleMenuSave} className="flex flex-col gap-3">
+
+                  {/* Image upload */}
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">{menuContent.imageLabel}</label>
+                    <div className="flex items-center gap-3">
+                      {menuImagePreview && (
+                        <img
+                          src={menuImagePreview}
+                          alt="preview"
+                          className="w-16 h-16 object-cover rounded-xl border border-gray-200 shrink-0"
+                        />
+                      )}
+                      <label className="flex-1 cursor-pointer">
+                        <div className="border-2 border-dashed border-gray-200 rounded-xl px-4 py-3 text-center text-sm text-gray-400 hover:border-red-400 hover:text-red-400 transition-colors">
+                          {menuImagePreview ? menuContent.imageChange : menuContent.imageChoose}
+                        </div>
+                        <input
+                          ref={fileInputRef}
+                          type="file"
+                          accept="image/*"
+                          onChange={handleMenuImageChange}
+                          className="hidden"
+                        />
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* Name */}
+                  <div>
+                    <input
+                      type="text"
+                      value={menuForm.name}
+                      onChange={e => setMenuForm({ ...menuForm, name: e.target.value })}
+                      placeholder={menuContent.namePlaceholder}
+                      className={`w-full border ${menuFormErrors.name ? 'border-red-400' : 'border-gray-200'} rounded-xl px-4 py-3 text-right focus:outline-none focus:ring-2 focus:ring-red-400`}
+                    />
+                    {menuFormErrors.name && <p className="text-red-500 text-xs mt-1">{menuFormErrors.name}</p>}
+                  </div>
+
+                  {/* Price */}
+                  <div>
+                    <input
+                      type="number"
+                      min="1"
+                      value={menuForm.price}
+                      onChange={e => setMenuForm({ ...menuForm, price: e.target.value })}
+                      placeholder={menuContent.pricePlaceholder}
+                      className={`w-full border ${menuFormErrors.price ? 'border-red-400' : 'border-gray-200'} rounded-xl px-4 py-3 text-right focus:outline-none focus:ring-2 focus:ring-red-400`}
+                    />
+                    {menuFormErrors.price && <p className="text-red-500 text-xs mt-1">{menuFormErrors.price}</p>}
+                  </div>
+
+                  {/* Description */}
+                  <textarea
+                    rows={2}
+                    value={menuForm.description}
+                    onChange={e => setMenuForm({ ...menuForm, description: e.target.value })}
+                    placeholder={menuContent.descriptionPlaceholder}
+                    className="w-full border border-gray-200 rounded-xl px-4 py-3 text-right focus:outline-none focus:ring-2 focus:ring-red-400 resize-none"
+                  />
+
+                  {/* PrepTime + PrepMinutes side by side */}
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={menuForm.prepTime}
+                      onChange={e => setMenuForm({ ...menuForm, prepTime: e.target.value })}
+                      placeholder={menuContent.prepTimePlaceholder}
+                      className="flex-1 border border-gray-200 rounded-xl px-4 py-3 text-right focus:outline-none focus:ring-2 focus:ring-red-400 text-sm"
+                    />
+                    <input
+                      type="number"
+                      min="1"
+                      value={menuForm.prepMinutes}
+                      onChange={e => setMenuForm({ ...menuForm, prepMinutes: e.target.value })}
+                      placeholder={menuContent.prepMinutesPlaceholder}
+                      className="flex-1 border border-gray-200 rounded-xl px-4 py-3 text-right focus:outline-none focus:ring-2 focus:ring-red-400 text-sm"
+                    />
+                  </div>
+
+                  {/* Includes */}
+                  <input
+                    type="text"
+                    value={menuForm.includes}
+                    onChange={e => setMenuForm({ ...menuForm, includes: e.target.value })}
+                    placeholder={menuContent.includesPlaceholder}
+                    className="w-full border border-gray-200 rounded-xl px-4 py-3 text-right focus:outline-none focus:ring-2 focus:ring-red-400"
+                  />
+
+                  {/* Actions */}
+                  <div className="flex gap-2 mt-1">
+                    <button
+                      type="submit"
+                      disabled={menuSaving}
+                      className="flex-1 bg-red-600 text-white font-black py-3 rounded-xl hover:bg-red-700 disabled:opacity-60 transition-colors"
+                    >
+                      {menuSaving ? menuContent.savingButton : menuContent.saveButton}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={resetMenuForm}
+                      className="px-5 bg-gray-100 text-gray-600 font-bold py-3 rounded-xl hover:bg-gray-200 transition-colors"
+                    >
+                      {menuContent.cancelButton}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            )}
+
+            {/* Items list */}
+            {menuLoading && <p className="text-center text-gray-500 py-10">{admin.loading}</p>}
+            {!menuLoading && menuItems.length === 0 && (
+              <p className="text-center text-gray-400 py-10">{menuContent.noItems}</p>
+            )}
+
+            {menuItems.map(item => (
+              <div key={item.id} className="bg-white rounded-2xl shadow-md border-r-4 border-red-400 overflow-hidden">
+
+                <div className="flex gap-3 p-4">
+                  {/* Image */}
+                  {item.image ? (
+                    <img
+                      src={item.image}
+                      alt={item.name}
+                      className="w-20 h-20 object-cover rounded-xl shrink-0"
+                    />
+                  ) : (
+                    <div className="w-20 h-20 bg-gray-100 rounded-xl shrink-0 flex items-center justify-center text-3xl">
+                      🍗
+                    </div>
+                  )}
+
+                  {/* Info */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="font-black text-gray-800 text-lg leading-tight">{item.name}</p>
+                      <p className="text-red-600 font-black text-lg shrink-0">{item.price} {menuContent.currency}</p>
+                    </div>
+
+                    {item.description && (
+                      <p className="text-gray-500 text-sm mt-0.5 line-clamp-2">{item.description}</p>
+                    )}
+
+                    {item.prepTime && (
+                      <p className="text-gray-400 text-xs mt-1">⏱ {item.prepTime}</p>
+                    )}
+
+                    {item.includes?.length > 0 && (
+                      <p className="text-gray-400 text-xs mt-0.5">
+                        {menuContent.includesLabel} {item.includes.join(' · ')}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Delete confirm or action buttons */}
+                {menuDeleteConfirm === item.id ? (
+                  <div className="border-t border-gray-100 px-4 py-3 bg-red-50 flex items-center justify-between gap-2">
+                    <p className="text-sm text-red-700 font-bold">{menuContent.confirmDeleteMsg}</p>
+                    <div className="flex gap-2 shrink-0">
+                      <button
+                        onClick={() => handleMenuDelete(item.id)}
+                        className="bg-red-600 text-white text-sm font-bold px-4 py-2 rounded-xl hover:bg-red-700 transition-colors"
+                      >
+                        {menuContent.confirmYes}
+                      </button>
+                      <button
+                        onClick={() => setMenuDeleteConfirm(null)}
+                        className="bg-gray-100 text-gray-600 text-sm font-bold px-4 py-2 rounded-xl hover:bg-gray-200 transition-colors"
+                      >
+                        {menuContent.confirmNo}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="border-t border-gray-100 px-4 py-2.5 flex gap-2">
+                    <button
+                      onClick={() => startEditMenuItem(item)}
+                      className="flex-1 bg-gray-100 text-gray-700 font-bold text-sm py-2 rounded-xl hover:bg-gray-200 transition-colors"
+                    >
+                      ✏️ {menuContent.editButton}
+                    </button>
+                    <button
+                      onClick={() => setMenuDeleteConfirm(item.id)}
+                      className="flex-1 bg-red-50 text-red-600 font-bold text-sm py-2 rounded-xl hover:bg-red-100 transition-colors"
+                    >
+                      🗑 {menuContent.deleteButton}
+                    </button>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+
         {/* ── Customers Tab ── */}
         {tab === 'customers' && (
           <div className="flex flex-col gap-4">
@@ -276,12 +632,10 @@ export default function Admin() {
         {tab === 'promos' && (
           <div className="flex flex-col gap-4">
 
-            {/* Add new promo form */}
             <div className="bg-white rounded-2xl p-4 shadow-md">
               <h2 className="font-black text-gray-800 mb-4">{promos.addTitle}</h2>
               <form onSubmit={handleAddPromo} className="flex flex-col gap-3">
 
-                {/* Code */}
                 <div>
                   <input
                     type="text"
@@ -293,7 +647,6 @@ export default function Admin() {
                   {promoFormErrors.code && <p className="text-red-500 text-xs mt-1">{promoFormErrors.code}</p>}
                 </div>
 
-                {/* Discount type + value side by side */}
                 <div className="flex gap-2">
                   <select
                     value={promoForm.discount_type}
@@ -316,7 +669,6 @@ export default function Admin() {
                 </div>
                 {promoFormErrors.discount_value && <p className="text-red-500 text-xs -mt-2">{promoFormErrors.discount_value}</p>}
 
-                {/* Max uses */}
                 <div>
                   <label className="block text-xs text-gray-500 mb-1">{promos.maxUsesLabel}</label>
                   <input
@@ -329,7 +681,6 @@ export default function Admin() {
                   />
                 </div>
 
-                {/* Expiry date */}
                 <div>
                   <label className="block text-xs text-gray-500 mb-1">{promos.expiryLabel}</label>
                   <input
@@ -350,7 +701,6 @@ export default function Admin() {
               </form>
             </div>
 
-            {/* Existing promo codes list */}
             {promosLoading && <p className="text-center text-gray-500 py-6">{admin.loading}</p>}
             {!promosLoading && promoCodes.length === 0 && (
               <p className="text-center text-gray-500 py-6">{promos.noPromos}</p>

@@ -1,4 +1,6 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
+import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
+import { db } from '../firebase';
 import Hero from '../components/Hero';
 import MenuCard from '../components/MenuCard';
 import CartBar from '../components/CartBar';
@@ -6,13 +8,24 @@ import CheckoutModal from '../components/CheckoutModal';
 import Footer from '../components/Footer';
 import ItemModal from '../components/ItemModal';
 import MyOrders from '../components/MyOrders';
-import { menuItems, extras } from '../data/menuItems';
+import { extras } from '../data/menuItems';
 import content from '../data/content.json';
 
 const { menu, home } = content;
 
 export default function Home() {
   const [tab, setTab] = useState('menu');
+  const [menuItems, setMenuItems] = useState([]);
+  const [menuLoading, setMenuLoading] = useState(true);
+
+  useEffect(() => {
+    const q = query(collection(db, 'menuItems'), orderBy('order', 'asc'));
+    const unsub = onSnapshot(q, snap => {
+      setMenuItems(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      setMenuLoading(false);
+    });
+    return unsub;
+  }, []);
   const [cart, setCart] = useState({});
   const [showCheckout, setShowCheckout] = useState(false);
   const [orderDone, setOrderDone] = useState(false);
@@ -80,18 +93,24 @@ export default function Home() {
       {tab === 'menu' && (
         <div ref={menuRef} className="max-w-lg mx-auto px-4 py-8">
           <h2 className="text-2xl font-black text-gray-800 mb-4 text-center">{menu.sectionTitle}</h2>
-          <div className="grid gap-4">
-            {menuItems.map(item => (
-              <MenuCard
-                key={item.id}
-                item={item}
-                quantity={getQty(item.id)}
-                onAdd={() => addItem(item)}
-                onRemove={() => removeItem(item)}
-                onOpen={() => setSelectedItem(item)}
-              />
-            ))}
-          </div>
+          {menuLoading ? (
+            <div className="flex justify-center py-16">
+              <div className="w-10 h-10 border-4 border-red-600 border-t-transparent rounded-full animate-spin" />
+            </div>
+          ) : (
+            <div className="grid gap-4">
+              {menuItems.map(item => (
+                <MenuCard
+                  key={item.id}
+                  item={item}
+                  quantity={getQty(item.id)}
+                  onAdd={() => addItem(item)}
+                  onRemove={() => removeItem(item)}
+                  onOpen={() => setSelectedItem(item)}
+                />
+              ))}
+            </div>
+          )}
 
           <h2 className="text-2xl font-black text-gray-800 mt-8 mb-4 text-center">{menu.extrasSectionTitle}</h2>
           <div className="grid grid-cols-2 gap-3">
