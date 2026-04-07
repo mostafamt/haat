@@ -25,7 +25,7 @@ export default function Home() {
   const menuRef = useRef(null);
 
   const { cartItems, total, itemCount, getQty, addItem, removeItem, clearCart } = useCart();
-  const { isStoreOpen } = useStoreStatus();
+  const { isStoreOpen, closedReason, workingHours } = useStoreStatus();
 
   useEffect(() => {
     const unsubMenu   = subscribeMenuItems(items => { setMenuItems(items); setMenuLoading(false); });
@@ -42,7 +42,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-gray-50" dir="rtl">
-      {!isStoreOpen && <ClosedBanner />}
+      {!isStoreOpen && <ClosedBanner closedReason={closedReason} workingHours={workingHours} />}
       <div className={!isStoreOpen ? 'pt-12' : ''}>
       <Hero onOrderClick={() => menuRef.current?.scrollIntoView({ behavior: 'smooth' })} />
 

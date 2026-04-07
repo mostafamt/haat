@@ -172,7 +172,8 @@
       "orders": "الطلبات",
       "promos": "أكواد الخصم",
       "customers": "العملاء",
-      "menu": "القائمة"
+      "menu": "القائمة",
+      "settings": "الإعدادات"
     },
     "customers": {
       "noCustomers": "لا يوجد عملاء بعد",
@@ -323,8 +324,27 @@
     "openLabel": "المتجر مفتوح",
     "closedLabel": "المتجر مغلق",
     "closedBanner": "المطبخ مغلق حالياً. ننتظركم غداً للاستمتاع بأصل المشويات السورية 🔴",
+    "adminClosedBanner": "المطعم مغلق مؤقتاً من قِبل الإدارة 🔴",
+    "countdownPrefix": "يفتح خلال",
+    "countdownHour": "س",
+    "countdownMinute": "د",
+    "countdownSecond": "ث",
     "toastOpened": "✅ تم فتح المتجر",
     "toastClosed": "🔴 تم إغلاق المتجر",
     "orderBlockedError": "المطعم مغلق حالياً ولا يقبل طلبات."
+  },
+
+  "workingHours": {
+    "title": "مواعيد العمل",
+    "openLabel": "من",
+    "closeLabel": "إلى",
+    "offLabel": "إجازة",
+    "closedDay": "مغلق",
+    "saveButton": "حفظ المواعيد",
+    "savingButton": "جاري الحفظ...",
+    "saveSuccess": "✅ تم حفظ المواعيد",
+    "saveError": "فشل حفظ المواعيد",
+    "storeToggleTitle": "حالة المتجر",
+    "workingHoursNote": "مواعيد العمل الافتراضية"
   }
 }

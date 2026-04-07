@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
 import content from '../data/content.json';
 import { subscribeOrders } from '../services/ordersService';
+import { useStoreStatus } from '../hooks/useStoreStatus';
 import OrdersTab from '../components/admin/OrdersTab';
 import MenuTab from '../components/admin/MenuTab';
 import PromosTab from '../components/admin/PromosTab';
 import CustomersTab from '../components/admin/CustomersTab';
+import SettingsTab from '../components/admin/SettingsTab';
 import StoreToggle from '../components/admin/StoreToggle';
 
 const { admin } = content;
@@ -13,6 +15,7 @@ export default function Admin() {
   const [tab, setTab] = useState('orders');
   const [orders, setOrders] = useState([]);
   const [ordersLoading, setOrdersLoading] = useState(true);
+  const { workingHours } = useStoreStatus();
 
   useEffect(() => {
     const unsub = subscribeOrders(data => { setOrders(data); setOrdersLoading(false); });
@@ -33,17 +36,18 @@ export default function Admin() {
         </div>
 
         {/* Main tab switcher */}
-        <div className="grid grid-cols-4 bg-white rounded-2xl p-1 mb-6 shadow-sm gap-1">
+        <div className="grid grid-cols-5 bg-white rounded-2xl p-1 mb-6 shadow-sm gap-1">
           {[
             { key: 'orders',    label: admin.tabs.orders },
             { key: 'menu',      label: admin.tabs.menu },
             { key: 'promos',    label: admin.tabs.promos },
             { key: 'customers', label: admin.tabs.customers },
+            { key: 'settings',  label: admin.tabs.settings },
           ].map(({ key, label }) => (
             <button
               key={key}
               onClick={() => setTab(key)}
-              className={`py-2.5 rounded-xl font-bold text-sm transition-colors ${tab === key ? 'bg-red-600 text-white' : 'text-gray-500 hover:text-gray-700'}`}
+              className={`py-2.5 rounded-xl font-bold text-xs transition-colors ${tab === key ? 'bg-red-600 text-white' : 'text-gray-500 hover:text-gray-700'}`}
             >
               {label}
             </button>
@@ -54,6 +58,7 @@ export default function Admin() {
         {tab === 'menu'      && <MenuTab />}
         {tab === 'promos'    && <PromosTab />}
         {tab === 'customers' && <CustomersTab />}
+        {tab === 'settings'  && workingHours && <SettingsTab workingHours={workingHours} />}
 
       </div>
     </div>

@@ -1,22 +1,40 @@
 import { useEffect, useState } from 'react';
-import { doc, onSnapshot } from 'firebase/firestore';
-import { db } from '../firebase';
+import { subscribeSettings } from '../services/settingsService';
+import { isWithinWorkingHours } from '../utils/workingHours';
 
 export function useStoreStatus() {
-  const [isStoreOpen, setIsStoreOpen] = useState(true);
-  const [loading, setLoading] = useState(true);
+  const [adminIsOpen,   setAdminIsOpen]   = useState(true);
+  const [workingHours,  setWorkingHours]  = useState(null);
+  const [withinHours,   setWithinHours]   = useState(true);
+  const [loading,       setLoading]       = useState(true);
 
+  // Subscribe to Firestore settings
   useEffect(() => {
-    const unsub = onSnapshot(doc(db, 'meta', 'settings'), snap => {
-      if (snap.exists()) {
-        setIsStoreOpen(snap.data().isStoreOpen !== false);
-      } else {
-        setIsStoreOpen(true); // doc missing → treat as open
-      }
+    const unsub = subscribeSettings(({ isStoreOpen, workingHours: wh }) => {
+      setAdminIsOpen(isStoreOpen);
+      setWorkingHours(wh);
+      setWithinHours(isWithinWorkingHours(wh));
       setLoading(false);
     });
     return unsub;
   }, []);
 
-  return { isStoreOpen, loading };
+  // Re-evaluate working hours every minute
+  useEffect(() => {
+    if (!workingHours) return;
+    const id = setInterval(() => {
+      setWithinHours(isWithinWorkingHours(workingHours));
+    }, 60_000);
+    return () => clearInterval(id);
+  }, [workingHours]);
+
+  const isStoreOpen = adminIsOpen && withinHours;
+
+  const closedReason = isStoreOpen
+    ? null
+    : !withinHours
+      ? 'hours'
+      : 'admin';
+
+  return { isStoreOpen, adminIsOpen, closedReason, workingHours, loading };
 }

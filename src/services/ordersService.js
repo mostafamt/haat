@@ -21,8 +21,12 @@ export async function hasCompletedOrder(phone) {
 export async function createOrder({ phone, name, address, zone, items, subtotal, discount, promoCode, grandTotal, deliveryPrice, requiresPrepay }) {
   // Guard: reject if store is closed at submission time
   const settingsSnap = await getDoc(doc(db, 'meta', 'settings'));
-  if (settingsSnap.exists() && settingsSnap.data().isStoreOpen === false) {
-    throw new Error('STORE_CLOSED');
+  if (settingsSnap.exists()) {
+    const { isStoreOpen, workingHours } = settingsSnap.data();
+    const { isWithinWorkingHours } = await import('../utils/workingHours.js');
+    if (isStoreOpen === false || !isWithinWorkingHours(workingHours)) {
+      throw new Error('STORE_CLOSED');
+    }
   }
 
   const counterRef  = doc(db, 'meta', 'counters');

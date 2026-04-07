@@ -1,5 +1,6 @@
 import content from '../data/content.json';
 import { config } from '../config/env';
+import WorkingHoursDisplay from './WorkingHoursDisplay';
 
 const { brand, footer, contact } = content;
 const tel = `tel:+${config.whatsappNumber}`;
@@ -31,7 +32,9 @@ export default function Footer() {
         </a>
       </div>
 
-      <p className="text-gray-500 text-xs">{footer.copyright} {new Date().getFullYear()}</p>
+      <WorkingHoursDisplay />
+
+      <p className="text-gray-500 text-xs mt-5">{footer.copyright} {new Date().getFullYear()}</p>
     </footer>
   );
 }
