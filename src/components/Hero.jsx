@@ -1,9 +1,9 @@
 import content from '../data/content.json';
+import { config } from '../config/env';
 
 const { brand, hero, contact } = content;
-const phone = import.meta.env.VITE_WHATSAPP_NUMBER;
-const tel   = `tel:+${phone}`;
-const wa    = `https://wa.me/${phone}`;
+const tel = `tel:+${config.whatsappNumber}`;
+const wa  = `https://wa.me/${config.whatsappNumber}`;
 
 export default function Hero({ onOrderClick }) {
   return (

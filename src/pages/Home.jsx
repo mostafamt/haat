@@ -1,6 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
-import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
-import { db } from '../firebase';
+import { useEffect, useRef, useState } from 'react';
 import Hero from '../components/Hero';
 import MenuCard from '../components/MenuCard';
 import CartBar from '../components/CartBar';
@@ -9,6 +7,8 @@ import Footer from '../components/Footer';
 import ItemModal from '../components/ItemModal';
 import MyOrders from '../components/MyOrders';
 import content from '../data/content.json';
+import { subscribeMenuItems, subscribeExtras } from '../services/menuService';
+import { useCart } from '../hooks/useCart';
 
 const { menu, home } = content;
 
@@ -17,52 +17,21 @@ export default function Home() {
   const [menuItems, setMenuItems] = useState([]);
   const [menuLoading, setMenuLoading] = useState(true);
   const [extras, setExtras] = useState([]);
-
-  useEffect(() => {
-    const unsubMenu = onSnapshot(
-      query(collection(db, 'menuItems'), orderBy('order', 'asc')),
-      snap => {
-        setMenuItems(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-        setMenuLoading(false);
-      }
-    );
-    const unsubExtras = onSnapshot(
-      query(collection(db, 'extras'), orderBy('order', 'asc')),
-      snap => setExtras(snap.docs.map(d => ({ id: d.id, ...d.data() })))
-    );
-    return () => { unsubMenu(); unsubExtras(); };
-  }, []);
-  const [cart, setCart] = useState({});
   const [showCheckout, setShowCheckout] = useState(false);
   const [orderDone, setOrderDone] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
   const menuRef = useRef(null);
 
-  const getQty = (id) => cart[id]?.quantity || 0;
-  const addItem = (item) => {
-    setCart(prev => ({
-      ...prev,
-      [item.id]: { ...item, quantity: (prev[item.id]?.quantity || 0) + 1 },
-    }));
-  };
-  const removeItem = (item) => {
-    setCart(prev => {
-      const qty = (prev[item.id]?.quantity || 0) - 1;
-      if (qty <= 0) {
-        const next = { ...prev };
-        delete next[item.id];
-        return next;
-      }
-      return { ...prev, [item.id]: { ...item, quantity: qty } };
-    });
-  };
+  const { cartItems, total, itemCount, getQty, addItem, removeItem, clearCart } = useCart();
 
-  const cartItems = Object.values(cart);
-  const total = cartItems.reduce((sum, i) => sum + i.price * i.quantity, 0);
-  const itemCount = cartItems.reduce((sum, i) => sum + i.quantity, 0);
+  useEffect(() => {
+    const unsubMenu   = subscribeMenuItems(items => { setMenuItems(items); setMenuLoading(false); });
+    const unsubExtras = subscribeExtras(items => setExtras(items));
+    return () => { unsubMenu(); unsubExtras(); };
+  }, []);
 
   const handleSuccess = () => {
-    setCart({});
+    clearCart();
     setShowCheckout(false);
     setOrderDone(true);
     setTimeout(() => setOrderDone(false), 5000);
@@ -137,7 +106,6 @@ export default function Home() {
       {tab === 'myOrders' && <MyOrders />}
 
       <div className="pb-24" />
-
       <Footer />
 
       <CartBar itemCount={itemCount} total={total} onCheckout={() => setShowCheckout(true)} />
