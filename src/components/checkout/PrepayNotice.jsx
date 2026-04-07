@@ -36,6 +36,7 @@ export default function PrepayNotice({ grandTotal, orderId, onConfirm }) {
   const [proofUploading, setProofUploading]         = useState(false);
   const [proofUploadError, setProofUploadError]     = useState('');
   const [proofUrl, setProofUrl]                     = useState('');
+  const [copiedKey, setCopiedKey]                   = useState('');
 
   const resetProof = () => {
     setProofFile(null);
@@ -48,6 +49,24 @@ export default function PrepayNotice({ grandTotal, orderId, onConfirm }) {
     setSelectedPayMethod(key);
     resetProof();
     setPaymentConfirmed(false);
+  };
+
+  const copyToClipboard = async (text, key) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedKey(key);
+      setTimeout(() => setCopiedKey(''), 2000);
+    } catch {
+      // fallback for older browsers
+      const el = document.createElement('textarea');
+      el.value = text;
+      document.body.appendChild(el);
+      el.select();
+      document.execCommand('copy');
+      document.body.removeChild(el);
+      setCopiedKey(key);
+      setTimeout(() => setCopiedKey(''), 2000);
+    }
   };
 
   const handleUploadProof = async () => {
@@ -81,30 +100,41 @@ export default function PrepayNotice({ grandTotal, orderId, onConfirm }) {
         <div className="flex flex-col gap-3 mb-5">
           {METHODS.map(({ key, label, getDetail, activeBg, activeBorder, labelColor }) => {
             const isSelected = selectedPayMethod === key;
+            const detail = getDetail();
+            const isCopied = copiedKey === key;
             return (
-              <button
+              <div
                 key={key}
-                type="button"
                 onClick={() => handleMethodSelect(key)}
-                className={`w-full text-right border-2 rounded-2xl p-4 transition-all ${isSelected ? `${activeBg} ${activeBorder}` : 'bg-gray-50 border-gray-200'}`}
+                className={`w-full text-right border-2 rounded-2xl p-4 transition-all cursor-pointer ${isSelected ? `${activeBg} ${activeBorder}` : 'bg-gray-50 border-gray-200'}`}
               >
                 <div className="flex items-center gap-3">
                   <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ${isSelected ? 'border-gray-800 bg-gray-800' : 'border-gray-400'}`}>
                     {isSelected && <div className="w-2 h-2 rounded-full bg-white" />}
                   </div>
-                  <div className="flex-1">
-                    <p className={`font-black text-sm ${isSelected ? labelColor : 'text-gray-600'}`}>{label}</p>
-                    {isSelected && (
-                      <p className="text-gray-700 text-sm mt-1">
-                        {prepayNotice.transferTo}{' '}
-                        <span className="font-black text-gray-900">{grandTotal} {prepayNotice.currency}</span>{' '}
-                        {prepayNotice.toLabel}{' '}
-                        <span className="font-black text-gray-900 tracking-wider">{getDetail()}</span>
-                      </p>
-                    )}
-                  </div>
+                  <p className={`flex-1 font-black text-sm ${isSelected ? labelColor : 'text-gray-600'}`}>{label}</p>
                 </div>
-              </button>
+
+                {isSelected && (
+                  <div className="mt-3 flex items-center justify-between bg-white border border-gray-200 rounded-xl px-3 py-2.5 gap-3">
+                    <p className="text-gray-700 text-sm">
+                      {prepayNotice.transferTo}{' '}
+                      <span className="font-black text-gray-900">{grandTotal} {prepayNotice.currency}</span>{' '}
+                      {prepayNotice.toLabel}
+                    </p>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className="font-black text-gray-900 tracking-wider text-sm">{detail}</span>
+                      <button
+                        type="button"
+                        onClick={e => { e.stopPropagation(); copyToClipboard(detail, key); }}
+                        className={`text-xs font-bold px-2.5 py-1.5 rounded-lg transition-colors whitespace-nowrap ${isCopied ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                      >
+                        {isCopied ? '✓ تم النسخ' : 'نسخ'}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
             );
           })}
         </div>
