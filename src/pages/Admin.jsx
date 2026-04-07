@@ -5,6 +5,7 @@ import OrdersTab from '../components/admin/OrdersTab';
 import MenuTab from '../components/admin/MenuTab';
 import PromosTab from '../components/admin/PromosTab';
 import CustomersTab from '../components/admin/CustomersTab';
+import StoreToggle from '../components/admin/StoreToggle';
 
 const { admin } = content;
 
@@ -28,6 +29,7 @@ export default function Admin() {
           {tab === 'orders' && (
             <p className="text-sm opacity-80 mt-1">{orders.length} {admin.ordersTotal}</p>
           )}
+          <StoreToggle />
         </div>
 
         {/* Main tab switcher */}

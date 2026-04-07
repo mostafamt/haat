@@ -45,7 +45,7 @@ function ImageViewer({ src, alt, onClose }) {
   );
 }
 
-export default function ItemModal({ item, quantity, onAdd, onRemove, onClose }) {
+export default function ItemModal({ item, quantity, onAdd, onRemove, onClose, disabled }) {
   const [fullscreen, setFullscreen] = useState(false);
 
   return (
@@ -93,18 +93,19 @@ export default function ItemModal({ item, quantity, onAdd, onRemove, onClose }) 
             )}
 
             {/* Quantity controls */}
-            <div className="flex items-center justify-between bg-gray-50 rounded-2xl px-6 py-4">
+            <div className={`flex items-center justify-between bg-gray-50 rounded-2xl px-6 py-4 ${disabled ? 'opacity-50 grayscale' : ''}`}>
               <button
                 onClick={onRemove}
-                disabled={!quantity}
+                disabled={!quantity || disabled}
                 className="bg-white shadow text-red-600 rounded-full p-3 disabled:opacity-30 hover:scale-110 active:scale-90 transition-transform"
               >
                 <Minus size={22} strokeWidth={2.5} />
               </button>
               <span className="font-black text-gray-800 text-3xl w-12 text-center">{quantity}</span>
               <button
-                onClick={onAdd}
-                className="bg-red-600 text-white rounded-full p-3 hover:scale-110 active:scale-90 transition-transform"
+                onClick={disabled ? undefined : onAdd}
+                disabled={disabled}
+                className="bg-red-600 text-white rounded-full p-3 disabled:cursor-not-allowed hover:scale-110 active:scale-90 transition-transform"
               >
                 <Plus size={22} strokeWidth={2.5} />
               </button>

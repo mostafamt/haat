@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Phone, MapPin, User, X, Clock, Truck, Tag } from 'lucide-react';
+import { Phone, MapPin, User, X, Clock, Truck } from 'lucide-react';
 import content from '../data/content.json';
 import { config } from '../config/env';
 import { hasCompletedOrder, createOrder, upsertUser } from '../services/ordersService';
@@ -99,8 +99,12 @@ export default function CheckoutModal({ cart, total, onClose, onSuccess }) {
         onSuccess();
       }
     } catch (err) {
-      alert(checkout.errorAlert);
       console.error(err);
+      if (err.message === 'STORE_CLOSED') {
+        alert(content.storeStatus.orderBlockedError);
+      } else {
+        alert(checkout.errorAlert);
+      }
     } finally {
       setLoading(false);
     }
@@ -236,19 +240,14 @@ export default function CheckoutModal({ cart, total, onClose, onSuccess }) {
           </div>
 
           {/* Promo Code */}
-          <div>
-            <label className="block text-sm font-bold text-gray-700 mb-1">
-              <Tag size={14} className="inline ml-1" />{checkout.promo.label}
-            </label>
-            <PromoCodeField
-              subtotal={subtotal}
-              phone={form.phone}
-              appliedPromo={appliedPromo}
-              discount={discount}
-              onApply={(promo, discountAmount) => { setAppliedPromo(promo); setDiscount(discountAmount); }}
-              onRemove={() => { setAppliedPromo(null); setDiscount(0); }}
-            />
-          </div>
+          <PromoCodeField
+            subtotal={subtotal}
+            phone={form.phone}
+            appliedPromo={appliedPromo}
+            discount={discount}
+            onApply={(promo, discountAmount) => { setAppliedPromo(promo); setDiscount(discountAmount); }}
+            onRemove={() => { setAppliedPromo(null); setDiscount(0); }}
+          />
 
           <button
             type="submit"

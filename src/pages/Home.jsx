@@ -9,6 +9,8 @@ import MyOrders from '../components/MyOrders';
 import content from '../data/content.json';
 import { subscribeMenuItems, subscribeExtras } from '../services/menuService';
 import { useCart } from '../hooks/useCart';
+import { useStoreStatus } from '../hooks/useStoreStatus';
+import ClosedBanner from '../components/ClosedBanner';
 
 const { menu, home } = content;
 
@@ -23,6 +25,7 @@ export default function Home() {
   const menuRef = useRef(null);
 
   const { cartItems, total, itemCount, getQty, addItem, removeItem, clearCart } = useCart();
+  const { isStoreOpen } = useStoreStatus();
 
   useEffect(() => {
     const unsubMenu   = subscribeMenuItems(items => { setMenuItems(items); setMenuLoading(false); });
@@ -39,6 +42,8 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-gray-50" dir="rtl">
+      {!isStoreOpen && <ClosedBanner />}
+      <div className={!isStoreOpen ? 'pt-12' : ''}>
       <Hero onOrderClick={() => menuRef.current?.scrollIntoView({ behavior: 'smooth' })} />
 
       {orderDone && (
@@ -66,7 +71,7 @@ export default function Home() {
       </div>
 
       {tab === 'menu' && (
-        <div ref={menuRef} className="max-w-lg mx-auto px-4 py-8">
+        <div ref={menuRef} className="max-w-lg mx-auto px-4 py-8" id="menu-section">
           <h2 className="text-2xl font-black text-gray-800 mb-4 text-center">{menu.sectionTitle}</h2>
           {menuLoading ? (
             <div className="flex justify-center py-16">
@@ -82,6 +87,7 @@ export default function Home() {
                   onAdd={() => addItem(item)}
                   onRemove={() => removeItem(item)}
                   onOpen={() => setSelectedItem(item)}
+                  disabled={!isStoreOpen}
                 />
               ))}
             </div>
@@ -97,6 +103,7 @@ export default function Home() {
                 onAdd={() => addItem(item)}
                 onRemove={() => removeItem(item)}
                 onOpen={() => setSelectedItem(item)}
+                disabled={!isStoreOpen}
               />
             ))}
           </div>
@@ -108,7 +115,7 @@ export default function Home() {
       <div className="pb-24" />
       <Footer />
 
-      <CartBar itemCount={itemCount} total={total} onCheckout={() => setShowCheckout(true)} />
+      <CartBar itemCount={itemCount} total={total} onCheckout={() => setShowCheckout(true)} disabled={!isStoreOpen} />
 
       {selectedItem && (
         <ItemModal
@@ -117,6 +124,7 @@ export default function Home() {
           onAdd={() => addItem(selectedItem)}
           onRemove={() => removeItem(selectedItem)}
           onClose={() => setSelectedItem(null)}
+          disabled={!isStoreOpen}
         />
       )}
 
@@ -128,6 +136,7 @@ export default function Home() {
           onSuccess={handleSuccess}
         />
       )}
+      </div>
     </div>
   );
 }

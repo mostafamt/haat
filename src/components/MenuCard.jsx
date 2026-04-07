@@ -3,7 +3,7 @@ import content from '../data/content.json';
 
 const { menu } = content;
 
-export default function MenuCard({ item, quantity, onAdd, onRemove, onOpen }) {
+export default function MenuCard({ item, quantity, onAdd, onRemove, onOpen, disabled }) {
   return (
     <div className="bg-white rounded-2xl shadow-md p-4 flex flex-col gap-3 border border-gray-100 cursor-pointer" dir="rtl" onClick={onOpen}>
       {item.image && (
@@ -30,18 +30,19 @@ export default function MenuCard({ item, quantity, onAdd, onRemove, onOpen }) {
         )}
       </div>
       <div className="flex items-center justify-between mt-1">
-        <div className="flex items-center gap-3 bg-gray-100 rounded-full px-3 py-1" onClick={e => e.stopPropagation()}>
+        <div className={`flex items-center gap-3 rounded-full px-3 py-1 ${disabled ? 'bg-gray-100 opacity-50 grayscale' : 'bg-gray-100'}`} onClick={e => e.stopPropagation()}>
           <button
             onClick={onRemove}
-            disabled={!quantity}
+            disabled={!quantity || disabled}
             className="text-red-600 disabled:opacity-30 hover:scale-110 active:scale-90 transition-transform"
           >
             <Minus size={20} strokeWidth={2.5} />
           </button>
           <span className="font-black text-gray-800 text-lg w-6 text-center">{quantity}</span>
           <button
-            onClick={onAdd}
-            className="text-red-600 hover:scale-110 active:scale-90 transition-transform"
+            onClick={disabled ? undefined : onAdd}
+            disabled={disabled}
+            className="text-red-600 disabled:opacity-30 disabled:cursor-not-allowed hover:scale-110 active:scale-90 transition-transform"
           >
             <Plus size={20} strokeWidth={2.5} />
           </button>

@@ -3,6 +3,7 @@ import {
   orderBy, onSnapshot, runTransaction, serverTimestamp,
   setDoc, updateDoc, increment,
 } from 'firebase/firestore';
+
 import { db } from '../firebase';
 
 export const subscribeOrders = (callback) => {
@@ -18,6 +19,12 @@ export async function hasCompletedOrder(phone) {
 }
 
 export async function createOrder({ phone, name, address, zone, items, subtotal, discount, promoCode, grandTotal, deliveryPrice, requiresPrepay }) {
+  // Guard: reject if store is closed at submission time
+  const settingsSnap = await getDoc(doc(db, 'meta', 'settings'));
+  if (settingsSnap.exists() && settingsSnap.data().isStoreOpen === false) {
+    throw new Error('STORE_CLOSED');
+  }
+
   const counterRef  = doc(db, 'meta', 'counters');
   const newOrderRef = doc(collection(db, 'orders'));
   let orderNumber;
