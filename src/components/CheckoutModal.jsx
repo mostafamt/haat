@@ -1,11 +1,15 @@
 import { useState } from 'react';
 import { Phone, MapPin, User, X, Clock, Truck, Tag } from 'lucide-react';
-import { collection, runTransaction, serverTimestamp, getDocs, query, where, getDoc, setDoc, doc, increment } from 'firebase/firestore';
+import { collection, runTransaction, serverTimestamp, getDocs, query, where, limit, getDoc, setDoc, updateDoc, doc, increment } from 'firebase/firestore';
 import { db } from '../firebase';
 import content from '../data/content.json';
 
 const { checkout, whatsapp, delivery } = content;
-const { promo } = checkout;
+const { promo, prepayNotice } = checkout;
+
+const PREPAY_THRESHOLD  = 500;
+const VODAFONE_CASH_NUM = import.meta.env.VITE_VODAFONE_CASH_NUM || '01XXXXXXXXX';
+const INSTAPAY_IPA      = import.meta.env.VITE_INSTAPAY_IPA      || 'youripa@bank';
 
 function getMaxPrepTime(cart) {
   const best = cart.reduce((max, item) => (item.prepMinutes ?? 0) > (max.prepMinutes ?? 0) ? item : max, cart[0]);
@@ -16,6 +20,16 @@ export default function CheckoutModal({ cart, total, onClose, onSuccess }) {
   const [form, setForm] = useState({ name: '', address: '', phone: '', zoneId: '' });
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
+  const [showPrepayNotice, setShowPrepayNotice] = useState(false);
+  const [prepayOrderNumber, setPrepayOrderNumber] = useState(null);
+  const [prepayOrderId, setPrepayOrderId] = useState(null);
+  const [selectedPayMethod, setSelectedPayMethod] = useState('');
+  const [proofFile, setProofFile] = useState(null);
+  const [proofPreviewUrl, setProofPreviewUrl] = useState('');
+  const [proofUploading, setProofUploading] = useState(false);
+  const [proofUploadError, setProofUploadError] = useState('');
+  const [proofUrl, setProofUrl] = useState('');
+  const [paymentConfirmed, setPaymentConfirmed] = useState(false);
 
   const [promoInput, setPromoInput] = useState('');
   const [promoChecking, setPromoChecking] = useState(false);
@@ -117,6 +131,55 @@ export default function CheckoutModal({ cart, total, onClose, onSuccess }) {
     setPromoError('');
   };
 
+  const buildWaMessage = (orderNumber, name, address, phone, isPrepay, payMethod = '') => {
+    const itemsList = cart.map(i => `${i.name} = ${i.price} × ${i.quantity} = ${i.price * i.quantity} ${whatsapp.currency}`).join('\n');
+    const discountLine = appliedPromo ? `\n${whatsapp.discountLabel} (${appliedPromo.code}): - ${discount} ${whatsapp.currency}` : '';
+    const prepayHeader = isPrepay ? `${whatsapp.prepayFlag}\n` : '';
+    const methodName = payMethod === 'vodafone' ? prepayNotice.vodafoneCashName : payMethod === 'instapay' ? prepayNotice.instaPayName : '';
+    const prepayFooter = isPrepay ? `\n${whatsapp.prepayStatus}${methodName ? `\n${whatsapp.prepayMethodLabel} ${methodName}` : ''}` : '';
+    return encodeURIComponent(
+      `${prepayHeader}${whatsapp.header}\n${whatsapp.orderNumberLabel} #${orderNumber}\n\n${whatsapp.nameLabel} ${name}\n${whatsapp.addressLabel} ${address}\n${whatsapp.phoneLabel} ${phone}\n${delivery.zoneWhatsappLabel} ${selectedZone.name}\n\n${whatsapp.itemsLabel}\n${itemsList}${discountLine}\n\n${delivery.whatsappLabel} ${deliveryPrice} ${delivery.currency}\n${whatsapp.totalLabel} ${grandTotal} ${whatsapp.currency}\n${whatsapp.prepTimeLabel} ${maxPrepTime}${prepayFooter}`
+    );
+  };
+
+  const openWhatsApp = (msg) => {
+    const number = import.meta.env.VITE_WHATSAPP_NUMBER || '201000000000';
+    window.open(`https://wa.me/${number}?text=${msg}`, '_blank');
+  };
+
+  const resetProof = () => {
+    setProofFile(null);
+    setProofPreviewUrl('');
+    setProofUrl('');
+    setProofUploadError('');
+  };
+
+  const uploadProof = async () => {
+    if (!proofFile) return;
+    setProofUploading(true);
+    setProofUploadError('');
+    try {
+      const formData = new FormData();
+      formData.append('file', proofFile);
+      formData.append('upload_preset', import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET);
+      formData.append('folder', 'haat/proofs');
+      const res = await fetch(
+        `https://api.cloudinary.com/v1_1/${import.meta.env.VITE_CLOUDINARY_CLOUD_NAME}/image/upload`,
+        { method: 'POST', body: formData }
+      );
+      if (!res.ok) throw new Error('upload failed');
+      const data = await res.json();
+      const url = data.secure_url;
+      setProofUrl(url);
+      await updateDoc(doc(db, 'orders', prepayOrderId), { paymentProofUrl: url });
+    } catch (err) {
+      console.error(err);
+      setProofUploadError(prepayNotice.proofUploadError);
+    } finally {
+      setProofUploading(false);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     const errs = validate();
@@ -129,11 +192,18 @@ export default function CheckoutModal({ cart, total, onClose, onSuccess }) {
         price: i.price,
         quantity: i.quantity,
       }));
-      const phone = form.phone.trim();
-      const name  = form.name.trim();
+      const phone   = form.phone.trim();
+      const name    = form.name.trim();
       const address = form.address.trim();
 
-      const counterRef = doc(db, 'meta', 'counters');
+      // Check if this phone has any previously completed (done) order
+      const prevDoneSnap = await getDocs(
+        query(collection(db, 'orders'), where('phone', '==', phone), where('status', '==', 'done'), limit(1))
+      );
+      const isNewCustomer = prevDoneSnap.empty;
+      const requiresPrepay = isNewCustomer && grandTotal > PREPAY_THRESHOLD;
+
+      const counterRef  = doc(db, 'meta', 'counters');
       const newOrderRef = doc(collection(db, 'orders'));
       let orderNumber;
 
@@ -153,13 +223,13 @@ export default function CheckoutModal({ cart, total, onClose, onSuccess }) {
           promoCode: appliedPromo ? appliedPromo.code : null,
           total: grandTotal,
           deliveryPrice,
-          status: 'pending',
+          status: requiresPrepay ? 'pending_payment' : 'pending',
           timestamp: serverTimestamp(),
         });
       });
 
       // Upsert user document — create on first order, update counts on repeat orders
-      const userRef = doc(db, 'users', phone);
+      const userRef  = doc(db, 'users', phone);
       const userSnap = await getDoc(userRef);
       await setDoc(userRef, {
         name,
@@ -171,14 +241,18 @@ export default function CheckoutModal({ cart, total, onClose, onSuccess }) {
         ...(!userSnap.exists() && { firstOrderAt: serverTimestamp() }),
       }, { merge: true });
 
-      const number = import.meta.env.VITE_WHATSAPP_NUMBER || '201000000000';
-      const itemsList = cart.map(i => `${i.name} = ${i.price} × ${i.quantity} = ${i.price * i.quantity} ${whatsapp.currency}`).join('\n');
-      const discountLine = appliedPromo ? `\n${whatsapp.discountLabel} (${appliedPromo.code}): - ${discount} ${whatsapp.currency}` : '';
-      const msg = encodeURIComponent(
-        `${whatsapp.header}\n${whatsapp.orderNumberLabel} #${orderNumber}\n\n${whatsapp.nameLabel} ${name}\n${whatsapp.addressLabel} ${address}\n${whatsapp.phoneLabel} ${phone}\n${delivery.zoneWhatsappLabel} ${selectedZone.name}\n\n${whatsapp.itemsLabel}\n${itemsList}${discountLine}\n\n${delivery.whatsappLabel} ${deliveryPrice} ${delivery.currency}\n${whatsapp.totalLabel} ${grandTotal} ${whatsapp.currency}\n${whatsapp.prepTimeLabel} ${maxPrepTime}`
-      );
-      window.open(`https://wa.me/${number}?text=${msg}`, '_blank');
-      onSuccess();
+      if (requiresPrepay) {
+        setPrepayOrderNumber(orderNumber);
+        setPrepayOrderId(newOrderRef.id);
+        setSelectedPayMethod('');
+        resetProof();
+        setPaymentConfirmed(false);
+        setShowPrepayNotice(true);
+      } else {
+        const msg = buildWaMessage(orderNumber, name, address, phone, false);
+        openWhatsApp(msg);
+        onSuccess();
+      }
     } catch (err) {
       alert(checkout.errorAlert);
       console.error(err);
@@ -186,6 +260,154 @@ export default function CheckoutModal({ cart, total, onClose, onSuccess }) {
       setLoading(false);
     }
   };
+
+  // Pre-payment notice screen — shown after order is saved but before WhatsApp opens
+  if (showPrepayNotice) {
+    const methods = [
+      {
+        key: 'vodafone',
+        label: prepayNotice.vodafoneCashLabel,
+        detail: VODAFONE_CASH_NUM,
+        activeBg: 'bg-red-50',
+        activeBorder: 'border-red-400',
+        labelColor: 'text-red-700',
+      },
+      {
+        key: 'instapay',
+        label: prepayNotice.instaPayLabel,
+        detail: INSTAPAY_IPA,
+        activeBg: 'bg-blue-50',
+        activeBorder: 'border-blue-400',
+        labelColor: 'text-blue-700',
+      },
+    ];
+
+    return (
+      <div className="fixed inset-0 bg-black/60 z-50 flex items-end justify-center p-0">
+        <div className="bg-white rounded-t-3xl w-full max-w-lg p-6 pb-10 max-h-[90vh] overflow-y-auto" dir="rtl">
+          <div className="text-center mb-6">
+            <div className="text-4xl mb-3">⚠️</div>
+            <h2 className="text-xl font-black text-red-600 mb-2">{prepayNotice.title}</h2>
+            <p className="text-gray-600 text-sm leading-relaxed">{prepayNotice.body}</p>
+          </div>
+
+          {/* Payment method selector */}
+          <p className="text-sm font-bold text-gray-700 mb-3">{prepayNotice.chooseMethodLabel}</p>
+          <div className="flex flex-col gap-3 mb-5">
+            {methods.map(({ key, label, detail, activeBg, activeBorder, labelColor }) => {
+              const isSelected = selectedPayMethod === key;
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => { setSelectedPayMethod(key); resetProof(); setPaymentConfirmed(false); }}
+                  className={`w-full text-right border-2 rounded-2xl p-4 transition-all ${isSelected ? `${activeBg} ${activeBorder}` : 'bg-gray-50 border-gray-200'}`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ${isSelected ? 'border-gray-800 bg-gray-800' : 'border-gray-400'}`}>
+                      {isSelected && <div className="w-2 h-2 rounded-full bg-white" />}
+                    </div>
+                    <div className="flex-1">
+                      <p className={`font-black text-sm ${isSelected ? labelColor : 'text-gray-600'}`}>{label}</p>
+                      {isSelected && (
+                        <p className="text-gray-700 text-sm mt-1">
+                          {prepayNotice.transferTo}{' '}
+                          <span className="font-black text-gray-900">{grandTotal} {prepayNotice.currency}</span>{' '}
+                          {prepayNotice.toLabel}{' '}
+                          <span className="font-black text-gray-900 tracking-wider">{detail}</span>
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Proof of payment upload */}
+          {selectedPayMethod && (
+            <div className="mb-5">
+              <p className="text-sm font-bold text-gray-700 mb-2">{prepayNotice.proofUploadLabel}</p>
+              {proofUrl ? (
+                <div className="bg-green-50 border border-green-300 rounded-2xl p-3 flex items-center gap-3">
+                  <img src={proofPreviewUrl} alt="proof" className="w-14 h-14 object-cover rounded-xl border border-green-200 shrink-0" />
+                  <span className="text-green-700 font-bold text-sm">{prepayNotice.proofUploadSuccess}</span>
+                </div>
+              ) : (
+                <div>
+                  <label className={`flex flex-col items-center justify-center w-full border-2 border-dashed rounded-2xl p-4 cursor-pointer transition-colors ${proofFile ? 'border-gray-300 bg-gray-50' : 'border-gray-300 hover:border-gray-400 bg-gray-50'}`}>
+                    {proofPreviewUrl ? (
+                      <img src={proofPreviewUrl} alt="preview" className="w-full max-h-40 object-contain rounded-xl" />
+                    ) : (
+                      <span className="text-gray-500 text-sm text-center">{prepayNotice.proofUploadHint}</span>
+                    )}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={e => {
+                        const f = e.target.files[0];
+                        if (!f) return;
+                        setProofFile(f);
+                        setProofPreviewUrl(URL.createObjectURL(f));
+                        setProofUploadError('');
+                      }}
+                    />
+                  </label>
+                  {proofFile && (
+                    <button
+                      type="button"
+                      onClick={uploadProof}
+                      disabled={proofUploading}
+                      className="w-full mt-2 bg-gray-800 text-white font-bold py-2.5 rounded-xl hover:bg-gray-700 disabled:opacity-50 transition-colors"
+                    >
+                      {proofUploading ? prepayNotice.proofUploadingButton : prepayNotice.proofUploadButton}
+                    </button>
+                  )}
+                  {proofUploadError && <p className="text-red-500 text-xs mt-1 text-center">{proofUploadError}</p>}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Payment done confirmation */}
+          <button
+            type="button"
+            disabled={!selectedPayMethod}
+            onClick={() => setPaymentConfirmed(true)}
+            className={`w-full font-black text-base py-3 rounded-2xl mb-4 transition-all ${
+              paymentConfirmed
+                ? 'bg-green-500 text-white cursor-default'
+                : selectedPayMethod
+                  ? 'bg-amber-500 text-white hover:bg-amber-600'
+                  : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+            }`}
+          >
+            {paymentConfirmed ? prepayNotice.paymentDoneConfirmed : prepayNotice.paymentDoneButton}
+          </button>
+
+          <p className="text-center text-gray-500 text-xs mb-5">{prepayNotice.afterTransferNote}</p>
+
+          <button
+            type="button"
+            disabled={!paymentConfirmed}
+            onClick={() => {
+              const finalMsg = buildWaMessage(prepayOrderNumber, form.name.trim(), form.address.trim(), form.phone.trim(), true, selectedPayMethod);
+              openWhatsApp(finalMsg);
+              onSuccess();
+            }}
+            className={`w-full font-black text-lg py-4 rounded-2xl transition-colors ${
+              paymentConfirmed
+                ? 'bg-green-600 text-white hover:bg-green-700'
+                : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+            }`}
+          >
+            {prepayNotice.confirmButton}
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 bg-black/60 z-50 flex items-end justify-center p-0">

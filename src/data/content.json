@@ -64,6 +64,28 @@
       "addressRequired": "العنوان مطلوب",
       "phoneInvalid": "رقم هاتف غير صحيح"
     },
+    "prepayNotice": {
+      "title": "تنبيه: مطلوب دفع مقدم ⚠️",
+      "body": "لأن هذا أول طلب من رقمك وقيمته أكثر من 500 جنيه، يجب سداد المبلغ مقدماً قبل بدء التحضير.",
+      "vodafoneCashLabel": "💳 محفظة إلكترونية",
+      "instaPayLabel": "🏦 إنستاباي",
+      "transferTo": "حوّل",
+      "currency": "جنيه",
+      "toLabel": "إلى",
+      "chooseMethodLabel": "اختر طريقة الدفع:",
+      "vodafoneCashName": "محفظة إلكترونية",
+      "instaPayName": "إنستاباي",
+      "proofUploadLabel": "إيصال التحويل",
+      "proofUploadHint": "اضغط لرفع صورة الإيصال 📎",
+      "proofUploadButton": "رفع الإيصال",
+      "proofUploadingButton": "جاري الرفع...",
+      "proofUploadSuccess": "تم رفع الإيصال بنجاح ✓",
+      "proofUploadError": "فشل الرفع، حاول مرة أخرى",
+      "paymentDoneButton": "تم الدفع ✓",
+      "paymentDoneConfirmed": "تم تأكيد الدفع ✓",
+      "afterTransferNote": "بمجرد التحويل، سيقوم فريق العمل بتأكيد استلام الدفعة معك عبر واتساب.",
+      "confirmButton": "فهمت — فتح واتساب 💬"
+    },
     "promo": {
       "label": "كود الخصم (اختياري)",
       "placeholder": "أدخل الكود",
@@ -86,6 +108,9 @@
   },
 
   "whatsapp": {
+    "prepayFlag": "🚨 طلب يحتاج تحقق من الدفع المقدم",
+    "prepayStatus": "⚠️ الحالة: في انتظار تأكيد الدفع المقدم",
+    "prepayMethodLabel": "💳 طريقة الدفع المختارة:",
     "header": "🍗 طلب جديد من هات",
     "nameLabel": "👤 الاسم:",
     "addressLabel": "📍 العنوان:",
@@ -123,6 +148,7 @@
     "currency": "جنيه",
     "status": {
       "pending": "قيد التجهيز ⏳",
+      "pending_payment": "في انتظار الدفع 🔴",
       "done": "تم التسليم ✅"
     }
   },
@@ -134,9 +160,12 @@
     "noOrders": "لا توجد طلبات بعد",
     "searchPlaceholder": "ابحث برقم الطلب...",
     "markDoneButton": "تم التسليم ✅",
+    "confirmPaymentButton": "✅ تأكيد الدفع",
+    "revertPaymentButton": "↩️ إلغاء تأكيد الدفع",
     "currency": "جنيه",
     "status": {
       "pending": "قيد التجهيز ⏳",
+      "pending_payment": "في انتظار الدفع 🔴",
       "done": "تم التسليم ✅"
     },
     "tabs": {

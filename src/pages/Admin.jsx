@@ -32,9 +32,11 @@ export default function Admin() {
   const [tab, setTab] = useState('orders');
 
   // ── Orders state ──────────────────────────────────────────
+  const ORDERS_PAGE_SIZE = 10;
   const [orders, setOrders] = useState([]);
   const [ordersLoading, setOrdersLoading] = useState(true);
   const [orderSearch, setOrderSearch] = useState('');
+  const [ordersPage, setOrdersPage] = useState(1);
 
   useEffect(() => {
     const q = query(collection(db, 'orders'), orderBy('timestamp', 'desc'));
@@ -47,6 +49,14 @@ export default function Admin() {
 
   const markDone = async (id) => {
     await updateDoc(doc(db, 'orders', id), { status: 'done' });
+  };
+
+  const confirmPayment = async (id) => {
+    await updateDoc(doc(db, 'orders', id), { status: 'pending' });
+  };
+
+  const revertPayment = async (id) => {
+    await updateDoc(doc(db, 'orders', id), { status: 'pending_payment' });
   };
 
   // ── Customers state ───────────────────────────────────────
@@ -375,13 +385,13 @@ export default function Admin() {
               <input
                 type="number"
                 value={orderSearch}
-                onChange={e => setOrderSearch(e.target.value)}
+                onChange={e => { setOrderSearch(e.target.value); setOrdersPage(1); }}
                 placeholder={admin.searchPlaceholder}
                 className="w-full border border-gray-200 bg-white rounded-xl px-4 py-3 text-right focus:outline-none focus:ring-2 focus:ring-red-400 shadow-sm"
               />
               {orderSearch && (
                 <button
-                  onClick={() => setOrderSearch('')}
+                  onClick={() => { setOrderSearch(''); setOrdersPage(1); }}
                   className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-lg leading-none"
                 >✕</button>
               )}
@@ -391,12 +401,20 @@ export default function Admin() {
             {!ordersLoading && orders.length === 0 && (
               <p className="text-center text-gray-500 py-10">{admin.noOrders}</p>
             )}
-            {orders
-              .filter(o => !orderSearch.trim() || String(o.orderNumber).includes(orderSearch.trim()))
-              .map(order => (
+            {!ordersLoading && (() => {
+              const filtered = orders.filter(o => !orderSearch.trim() || String(o.orderNumber).includes(orderSearch.trim()));
+              const totalPages = Math.max(1, Math.ceil(filtered.length / ORDERS_PAGE_SIZE));
+              const safePage = Math.min(ordersPage, totalPages);
+              const pageOrders = filtered.slice((safePage - 1) * ORDERS_PAGE_SIZE, safePage * ORDERS_PAGE_SIZE);
+              return (
+                <>
+                  {filtered.length === 0 && (
+                    <p className="text-center text-gray-500 py-10">{admin.noOrders}</p>
+                  )}
+                  {pageOrders.map(order => (
               <div
                 key={order.id}
-                className={`bg-white rounded-2xl p-4 shadow-md border-r-4 ${order.status === 'done' ? 'border-green-500' : 'border-amber-400'}`}
+                className={`bg-white rounded-2xl p-4 shadow-md border-r-4 ${order.status === 'done' ? 'border-green-500' : order.status === 'pending_payment' ? 'border-red-500' : 'border-amber-400'}`}
               >
                 <div className="flex items-start justify-between mb-3">
                   <div>
@@ -406,9 +424,12 @@ export default function Admin() {
                     <p className="font-black text-gray-800 text-lg">{order.name}</p>
                     <p className="text-gray-500 text-sm">📞 {order.phone}</p>
                     <p className="text-gray-500 text-sm">📍 {order.address}</p>
+                    {order.zone && (
+                      <p className="text-gray-500 text-sm">🛵 {order.zone}{order.deliveryPrice != null ? ` — ${order.deliveryPrice} ${admin.currency}` : ''}</p>
+                    )}
                   </div>
                   <div className="text-right">
-                    <span className={`text-xs font-bold px-3 py-1 rounded-full ${order.status === 'done' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
+                    <span className={`text-xs font-bold px-3 py-1 rounded-full ${order.status === 'done' ? 'bg-green-100 text-green-700' : order.status === 'pending_payment' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>
                       {admin.status[order.status] || order.status}
                     </span>
                     <p className="text-red-600 font-black text-lg mt-2">{order.total} {admin.currency}</p>
@@ -436,16 +457,71 @@ export default function Admin() {
                   </p>
                 )}
 
-                {order.status !== 'done' && (
+                {order.paymentProofUrl && (
+                  <div className="mb-3">
+                    <p className="text-xs font-bold text-gray-500 mb-1">إيصال الدفع</p>
+                    <a href={order.paymentProofUrl} target="_blank" rel="noopener noreferrer">
+                      <img
+                        src={order.paymentProofUrl}
+                        alt="إيصال الدفع"
+                        className="w-full max-h-48 object-contain rounded-xl border border-gray-200 bg-gray-50"
+                      />
+                    </a>
+                  </div>
+                )}
+
+                {order.status === 'pending_payment' && (
                   <button
-                    onClick={() => markDone(order.id)}
-                    className="w-full bg-green-500 text-white font-bold py-2.5 rounded-xl hover:bg-green-600 transition-colors"
+                    onClick={() => confirmPayment(order.id)}
+                    className="w-full bg-blue-600 text-white font-bold py-2.5 rounded-xl hover:bg-blue-700 transition-colors mb-2"
                   >
-                    {admin.markDoneButton}
+                    {admin.confirmPaymentButton}
                   </button>
+                )}
+                {order.status === 'pending' && (
+                  <div className="flex flex-col gap-2">
+                    {order.paymentProofUrl && (
+                      <button
+                        onClick={() => revertPayment(order.id)}
+                        className="w-full bg-orange-100 text-orange-700 font-bold py-2 rounded-xl hover:bg-orange-200 transition-colors text-sm"
+                      >
+                        {admin.revertPaymentButton}
+                      </button>
+                    )}
+                    <button
+                      onClick={() => markDone(order.id)}
+                      className="w-full bg-green-500 text-white font-bold py-2.5 rounded-xl hover:bg-green-600 transition-colors"
+                    >
+                      {admin.markDoneButton}
+                    </button>
+                  </div>
                 )}
               </div>
             ))}
+                  {totalPages > 1 && (
+                    <div className="flex items-center justify-between bg-white rounded-2xl px-4 py-3 shadow-sm mt-2">
+                      <button
+                        onClick={() => setOrdersPage(p => Math.max(1, p - 1))}
+                        disabled={safePage === 1}
+                        className="text-sm font-bold text-gray-600 disabled:text-gray-300 hover:text-red-600 disabled:cursor-not-allowed transition-colors"
+                      >
+                        → السابق
+                      </button>
+                      <span className="text-sm text-gray-500 font-bold">
+                        {safePage} / {totalPages}
+                      </span>
+                      <button
+                        onClick={() => setOrdersPage(p => Math.min(totalPages, p + 1))}
+                        disabled={safePage === totalPages}
+                        className="text-sm font-bold text-gray-600 disabled:text-gray-300 hover:text-red-600 disabled:cursor-not-allowed transition-colors"
+                      >
+                        التالي ←
+                      </button>
+                    </div>
+                  )}
+                </>
+              );
+            })()}
           </div>
         )}
 
