@@ -28,7 +28,7 @@ function groupDays(hours) {
     groups.push({
       label: days.length === 1
         ? days[0].day
-        : `${days[0].day} – ${days[days.length - 1].day}`,
+        : `${days[0].day} ${content.workingHours.to} ${days[days.length - 1].day}`,
       indices: days.map((_, k) => i + k),
       open:  cur.open,
       close: cur.close,

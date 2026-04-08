@@ -345,6 +345,7 @@
     "saveSuccess": "✅ تم حفظ المواعيد",
     "saveError": "فشل حفظ المواعيد",
     "storeToggleTitle": "حالة المتجر",
-    "workingHoursNote": "مواعيد العمل الافتراضية"
+    "workingHoursNote": "مواعيد العمل الافتراضية",
+    "to": "إلي"
   }
 }
