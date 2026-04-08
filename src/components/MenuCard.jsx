@@ -7,10 +7,10 @@ export default function MenuCard({ item, quantity, onAdd, onRemove, onOpen, disa
   return (
     <div className="bg-white rounded-2xl shadow-md p-4 flex flex-col gap-3 border border-gray-100 cursor-pointer" dir="rtl" onClick={onOpen}>
       {item.image && (
-        <img src={item.image} alt={item.name} className="w-full h-48 object-cover rounded-xl" />
+        <img src={item.image} alt={item.name} className="w-full h-36 object-contain rounded-xl" />
       )}
       <div className="flex items-center gap-3">
-        {!item.image && <span className="text-4xl">{item.emoji}</span>}
+        {!item.image && item.emoji && <span className="text-4xl">{item.emoji}</span>}
         <div className="flex-1">
           <h3 className="font-black text-gray-800 text-lg">{item.name}</h3>
           <p className="text-red-600 font-bold text-xl">{item.price} {menu.currency}</p>

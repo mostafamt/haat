@@ -108,10 +108,13 @@ export default function MenuTab() {
   const [extrasLoading, setExtrasLoading] = useState(true);
   const [showExtrasForm, setShowExtrasForm] = useState(false);
   const [editingExtraId, setEditingExtraId] = useState(null);
-  const [extrasForm, setExtrasForm] = useState({ name: '', price: '', emoji: '' });
+  const [extrasForm, setExtrasForm] = useState({ name: '', price: '', image: '' });
   const [extrasFormErrors, setExtrasFormErrors] = useState({});
   const [extrasSaving, setExtrasSaving] = useState(false);
   const [extrasDeleteConfirm, setExtrasDeleteConfirm] = useState(null);
+  const [extrasImageFile, setExtrasImageFile] = useState(null);
+  const [extrasImagePreview, setExtrasImagePreview] = useState('');
+  const extrasFileInputRef = useRef(null);
 
   useEffect(() => {
     setExtrasLoading(true);
@@ -122,17 +125,23 @@ export default function MenuTab() {
   const resetExtrasForm = () => {
     setShowExtrasForm(false);
     setEditingExtraId(null);
-    setExtrasForm({ name: '', price: '', emoji: '' });
+    setExtrasForm({ name: '', price: '', image: '' });
     setExtrasFormErrors({});
     setExtrasDeleteConfirm(null);
+    setExtrasImageFile(null);
+    setExtrasImagePreview('');
+    if (extrasFileInputRef.current) extrasFileInputRef.current.value = '';
   };
 
   const startEditExtra = (item) => {
     setEditingExtraId(item.id);
-    setExtrasForm({ name: item.name || '', price: item.price?.toString() || '', emoji: item.emoji || '' });
+    setExtrasForm({ name: item.name || '', price: item.price?.toString() || '', image: item.image || '' });
+    setExtrasImagePreview(item.image || '');
+    setExtrasImageFile(null);
     setExtrasFormErrors({});
     setShowExtrasForm(true);
     setExtrasDeleteConfirm(null);
+    if (extrasFileInputRef.current) extrasFileInputRef.current.value = '';
   };
 
   const handleExtrasSave = async (e) => {
@@ -146,10 +155,13 @@ export default function MenuTab() {
     setExtrasSaving(true);
     setExtrasFormErrors({});
     try {
+      let imageUrl = extrasForm.image || '';
+      if (extrasImageFile) imageUrl = await uploadImage(extrasImageFile, 'haat/extras');
+
       const data = {
         name: extrasForm.name.trim(),
         price: priceNum,
-        emoji: extrasForm.emoji.trim() || '✨',
+        image: imageUrl,
         order: editingExtraId
           ? (extrasItems.find(e => e.id === editingExtraId)?.order ?? extrasItems.length)
           : extrasItems.length,
@@ -379,6 +391,33 @@ export default function MenuTab() {
                 {editingExtraId ? extrasContent.editTitle : extrasContent.addTitle}
               </h2>
               <form onSubmit={handleExtrasSave} className="flex flex-col gap-3">
+                {/* Image upload */}
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">{menuContent.imageLabel}</label>
+                  <div className="flex items-center gap-3">
+                    {extrasImagePreview && (
+                      <img src={extrasImagePreview} alt="preview" className="w-16 h-16 object-cover rounded-xl border border-gray-200 shrink-0" />
+                    )}
+                    <label className="flex-1 cursor-pointer">
+                      <div className="border-2 border-dashed border-gray-200 rounded-xl px-4 py-3 text-center text-sm text-gray-400 hover:border-red-400 hover:text-red-400 transition-colors">
+                        {extrasImagePreview ? menuContent.imageChange : menuContent.imageChoose}
+                      </div>
+                      <input
+                        ref={extrasFileInputRef}
+                        type="file"
+                        accept="image/*"
+                        onChange={e => {
+                          const file = e.target.files[0];
+                          if (!file) return;
+                          setExtrasImageFile(file);
+                          setExtrasImagePreview(URL.createObjectURL(file));
+                        }}
+                        className="hidden"
+                      />
+                    </label>
+                  </div>
+                </div>
+
                 <div>
                   <input
                     type="text"
@@ -400,13 +439,6 @@ export default function MenuTab() {
                   />
                   {extrasFormErrors.price && <p className="text-red-500 text-xs mt-1">{extrasFormErrors.price}</p>}
                 </div>
-                <input
-                  type="text"
-                  value={extrasForm.emoji}
-                  onChange={e => setExtrasForm({ ...extrasForm, emoji: e.target.value })}
-                  placeholder={extrasContent.emojiPlaceholder}
-                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-right focus:outline-none focus:ring-2 focus:ring-red-400"
-                />
                 <div className="flex gap-2 mt-1">
                   <button
                     type="submit"
@@ -433,12 +465,16 @@ export default function MenuTab() {
           )}
 
           {extrasItems.map(item => (
-            <div key={item.id} className="bg-white rounded-2xl p-4 shadow-md flex items-center justify-between gap-3">
-              <div>
-                <p className="font-black text-gray-800">{item.emoji} {item.name}</p>
+            <div key={item.id} className="bg-white rounded-2xl p-4 shadow-md flex items-center gap-4">
+              {item.image
+                ? <img src={item.image} alt={item.name} className="w-16 h-16 object-cover rounded-xl shrink-0" />
+                : <div className="w-16 h-16 rounded-xl bg-gray-100 flex items-center justify-center text-3xl shrink-0">✨</div>
+              }
+              <div className="flex-1 min-w-0">
+                <p className="font-black text-gray-800">{item.name}</p>
                 <p className="text-red-600 font-bold text-sm">{item.price} {admin.currency}</p>
               </div>
-              <div className="flex gap-2">
+              <div className="flex gap-2 shrink-0">
                 <button
                   onClick={() => startEditExtra(item)}
                   className="bg-gray-100 text-gray-700 font-bold py-2 px-3 rounded-xl hover:bg-gray-200 transition-colors text-sm"
