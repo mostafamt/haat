@@ -2,6 +2,10 @@ import { useEffect, useState } from 'react';
 import { MapPin, MessageCircle, Bike, Link } from 'lucide-react';
 import { ImageWithFallback } from '../components/figma/ImageWithFallback';
 import { subscribeMenuItems, subscribeExtras } from '../services/menuService';
+import content from '../data/content.json';
+
+const { menu } = content;
+
 
 export default function Menu() {
   const [mainMeals, setMainMeals] = useState([]);
@@ -23,7 +27,7 @@ export default function Menu() {
           <div className="flex-1 p-8 md:p-12">
             <div className="mb-8 flex justify-center">
               <img
-                src="/option-a-2.png"
+                src="/simple-logo.png"
                 alt="هات - أصل المشويات"
                 className="w-40 md:w-48 drop-shadow-2xl"
                 style={{ filter: 'brightness(0) saturate(100%) invert(1)' }}
@@ -62,6 +66,15 @@ export default function Menu() {
               <MessageCircle className="w-7 h-7 md:w-8 md:h-8 fill-current flex-shrink-0" />
               <span className="text-xl md:text-2xl font-bold">للطلب: 01038373998</span>
             </div>
+            <div className="flex items-center justify-center gap-2 text-white pt-1">
+               او اطلب من خلال الويب سايت:
+              <Link className="w-5 h-5 md:w-6 md:h-6 flex-shrink-0" strokeWidth={2.5} />
+              <span className="text-base md:text-lg font-semibold">
+                <span className="font-bold underline decoration-2 underline-offset-2">
+                  haat-menu.vercel.app
+                </span>
+              </span>
+            </div>
             <div className="flex items-center justify-center gap-2 text-white">
               <MapPin className="w-5 h-5 md:w-6 md:h-6 fill-current flex-shrink-0" />
               <span className="text-base md:text-lg font-semibold">مساكن البيضا، كفر الدوار</span>
@@ -70,14 +83,7 @@ export default function Menu() {
               <Bike className="w-5 h-5 md:w-6 md:h-6 flex-shrink-0" strokeWidth={2.5} />
               <span className="text-base md:text-lg font-semibold">دليفري فقط 🛵</span>
             </div>
-            <div className="flex items-center justify-center gap-2 text-white pt-1">
-              <Link className="w-5 h-5 md:w-6 md:h-6 flex-shrink-0" strokeWidth={2.5} />
-              <span className="text-base md:text-lg font-semibold">
-                <span className="font-bold underline decoration-2 underline-offset-2">
-                  haat-menu.vercel.app
-                </span>
-              </span>
-            </div>
+            
           </div>
         </div>
 
@@ -86,7 +92,7 @@ export default function Menu() {
           <div className="flex-1 p-8 md:p-12">
             <div className="mb-8 flex justify-center">
               <img
-                src="/option-a-2.png"
+                src="/simple-logo.png"
                 alt="هات - أصل المشويات"
                 className="w-40 md:w-48 drop-shadow-lg"
               />
@@ -111,7 +117,12 @@ export default function Menu() {
                   </div>
                   <div className="flex-1">
                     <h3 className="text-2xl md:text-3xl font-bold text-red-600 mb-2">{meal.name}</h3>
-                    <p className="text-gray-700 text-base md:text-lg leading-relaxed">{meal.description}</p>
+                    <p className="text-gray-700 text-base md:text-lg leading-relaxed">{meal.inclues}</p>
+                    {meal.includes && (
+          <p className="text-xs text-gray-500">
+            {menu.includesLabel} {meal.includes.join(' · ')}
+          </p>
+        )}
                   </div>
                   <div className="bg-yellow-400 text-red-600 rounded-full w-24 h-24 flex items-center justify-center shadow-2xl">
                     <span className="text-xl font-bold text-center leading-tight">{meal.price} ج</span>
@@ -127,6 +138,15 @@ export default function Menu() {
               <MessageCircle className="w-7 h-7 md:w-8 md:h-8 fill-current flex-shrink-0" />
               <span className="text-xl md:text-2xl font-bold">للطلب: 01038373998</span>
             </div>
+            <div className="flex items-center justify-center gap-2 text-red-600 pt-1">
+               او اطلب من خلال الويب سايت:
+              <Link className="w-5 h-5 md:w-6 md:h-6 flex-shrink-0" strokeWidth={2.5} />
+              <span className="text-base md:text-lg font-semibold">
+                <span className="font-bold underline decoration-2 underline-offset-2">
+                  haat-menu.vercel.app
+                </span>
+              </span>
+            </div>
             <div className="flex items-center justify-center gap-2 text-red-600">
               <MapPin className="w-5 h-5 md:w-6 md:h-6 fill-current flex-shrink-0" />
               <span className="text-base md:text-lg font-semibold">مساكن البيضا، كفر الدوار</span>
@@ -135,14 +155,7 @@ export default function Menu() {
               <Bike className="w-5 h-5 md:w-6 md:h-6 flex-shrink-0" strokeWidth={2.5} />
               <span className="text-base md:text-lg font-semibold">دليفري فقط 🛵</span>
             </div>
-            <div className="flex items-center justify-center gap-2 text-red-600 pt-1">
-              <Link className="w-5 h-5 md:w-6 md:h-6 flex-shrink-0" strokeWidth={2.5} />
-              <span className="text-base md:text-lg font-semibold">
-                <span className="font-bold underline decoration-2 underline-offset-2">
-                  haat-menu.vercel.app
-                </span>
-              </span>
-            </div>
+            
           </div>
         </div>
 
