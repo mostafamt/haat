@@ -5,6 +5,9 @@ import WorkingHoursDisplay from './WorkingHoursDisplay';
 const { brand, footer, contact } = content;
 const tel = `tel:+${config.whatsappNumber}`;
 const wa  = `https://wa.me/${config.whatsappNumber}`;
+const displayPhone = config.whatsappNumber.startsWith('20')
+  ? '0' + config.whatsappNumber.slice(2)
+  : config.whatsappNumber;
 
 export default function Footer() {
   return (
@@ -13,6 +16,9 @@ export default function Footer() {
       <p className="text-gray-300 text-sm mb-1">{footer.tagline}</p>
 
       <p className="text-gray-400 text-xs font-bold mt-4 mb-2">{footer.contactTitle}</p>
+      <a href={tel} className="inline-block mb-3 px-6 py-2 rounded-xl bg-white">
+        <span className="text-xl font-black tracking-widest text-red-600 font-mono">{displayPhone} 📞</span>
+      </a>
       <div className="flex justify-center gap-3 mb-4">
         <a
           href={wa}

@@ -55,9 +55,6 @@ export default function StoreToggle({ inline = false }) {
           <p className={`font-bold text-sm ${adminIsOpen ? 'text-green-600' : 'text-red-600'}`}>
             {adminIsOpen ? storeStatus.openLabel : storeStatus.closedLabel}
           </p>
-          {!isStoreOpen && adminIsOpen && (
-            <p className="text-xs text-gray-400 mt-0.5">مغلق تلقائياً خارج أوقات العمل</p>
-          )}
         </div>
         {switchEl}
       </div>

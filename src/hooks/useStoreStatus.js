@@ -28,13 +28,9 @@ export function useStoreStatus() {
     return () => clearInterval(id);
   }, [workingHours]);
 
-  const isStoreOpen = adminIsOpen && withinHours;
+  const isStoreOpen = adminIsOpen;
 
-  const closedReason = isStoreOpen
-    ? null
-    : !withinHours
-      ? 'hours'
-      : 'admin';
+  const closedReason = isStoreOpen ? null : 'admin';
 
   return { isStoreOpen, adminIsOpen, closedReason, workingHours, loading };
 }

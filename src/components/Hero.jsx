@@ -4,6 +4,9 @@ import { config } from '../config/env';
 const { brand, hero, contact } = content;
 const tel = `tel:+${config.whatsappNumber}`;
 const wa  = `https://wa.me/${config.whatsappNumber}`;
+const displayPhone = config.whatsappNumber.startsWith('20')
+  ? '0' + config.whatsappNumber.slice(2)
+  : config.whatsappNumber;
 
 export default function Hero({ onOrderClick }) {
   return (
@@ -19,7 +22,13 @@ export default function Hero({ onOrderClick }) {
         >
           {hero.ctaButton}
         </button>
-        <div className="flex justify-center gap-3 mt-5">
+        <a
+          href={tel}
+          className="block mt-5 mb-4 px-8 py-3 rounded-2xl bg-white shadow-lg"
+        >
+          <span className="text-xl font-black tracking-widest text-red-600 font-mono">{displayPhone} 📞</span>
+        </a>
+        <div className="flex justify-center gap-3">
           <a
             href={wa}
             target="_blank"
